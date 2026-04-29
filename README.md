@@ -1,2 +1,1 @@
-# hiring-agent
-This application helps recruiters screen and rank resumes based on job descriptions using AI.
+Resume-to-job matching pipeline with hybrid keyword + LLM scoring, ontology-based skill normalization, and CI/CD via GitHub Actions. Stack: FastAPI, React, Docker.
