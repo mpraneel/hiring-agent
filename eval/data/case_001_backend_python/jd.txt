@@ -1,0 +1,26 @@
+Senior Backend Engineer
+Northwind Logistics, Remote (US)
+
+About the role
+We are growing our platform team and looking for a senior backend engineer to
+own the services behind our shipment tracking product. You will work with the
+rest of the team to design APIs, improve reliability, and mentor two junior
+engineers.
+
+Requirements
+- 5+ years of professional software engineering experience
+- Strong Python, including async frameworks such as FastAPI or Starlette
+- Production experience with PostgreSQL, including query tuning
+- Experience building and consuming REST APIs
+- Comfortable with Docker and container based deployment
+- Solid understanding of automated testing and CI
+
+Preferred Qualifications
+- Experience with Kubernetes in production
+- Familiarity with Kafka or another message queue
+- Exposure to Terraform or similar infrastructure as code tooling
+- Knowledge of Redis for caching and rate limiting
+- Go experience is a plus
+
+What we offer
+Competitive salary, equity, and a genuine remote first culture.

@@ -1,0 +1,24 @@
+Alex Morgan
+alex.morgan@example.com | (555) 010-2030 | Portland, OR
+
+Summary
+Backend engineer with seven years of experience building payment and logistics
+systems. I enjoy the unglamorous work of making services boring and reliable.
+
+Skills
+Python, FastAPI, Django, PostgreSQL, Redis, Docker, Kubernetes, REST,
+pytest, GitHub Actions, Terraform, Grafana
+
+Experience
+Senior Software Engineer at Cascade Freight, 2021 - 2024
+- Rebuilt the shipment tracking API in FastAPI, cutting p99 latency by 40%
+- Tuned PostgreSQL queries and added Redis caching for hot lookups
+- Ran the service on Kubernetes and wrote the Terraform modules for it
+
+Software Engineer at Bridgeline Payments, 2018 - 2021
+- Built internal REST APIs in Python and Django
+- Added pytest coverage to a legacy billing module
+- Containerised the deployment with Docker
+
+Education
+Bachelor of Science in Computer Science, Oregon State University, 2018

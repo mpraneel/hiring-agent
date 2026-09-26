@@ -1,0 +1,24 @@
+Frontend Engineer, Design Systems
+Larkspur Health, Hybrid (Boston)
+
+The team
+Our design systems group builds the component library every product team at
+Larkspur uses. Accessibility is not a nice to have for us, it is the job.
+
+Must have
+- 3+ years building production user interfaces
+- Expert React, including hooks and the composition patterns around them
+- Strong TypeScript, not just JavaScript with annotations
+- Demonstrated accessibility work, including keyboard and screen reader testing
+- Experience with a modern build tool such as Vite or webpack
+- Comfort writing component tests
+
+Nice to have
+- Experience maintaining a published component library
+- Familiarity with Figma and working closely with designers
+- Knowledge of CSS architecture at scale, for example Tailwind or CSS modules
+- Exposure to Storybook
+- Some Node experience for tooling work
+
+Interview process
+A portfolio conversation, a pairing session, and a team fit chat.
