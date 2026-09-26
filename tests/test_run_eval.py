@@ -135,38 +135,26 @@ def test_case_missing_a_file_is_skipped(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Hybrid merge rules
-# ---------------------------------------------------------------------------
-
-
-def test_hybrid_merge_is_a_union():
-    primary = {"jd_must_have": {"python"}, "jd_nice_to_have": {"go"}, "resume_skills": {"docker"}}
-    secondary = {"jd_must_have": {"rust"}, "jd_nice_to_have": set(), "resume_skills": {"git"}}
-    merged = run_eval.Extractor._merge(primary, secondary)
-    assert merged["jd_must_have"] == {"python", "rust"}
-    assert merged["jd_nice_to_have"] == {"go"}
-    assert merged["resume_skills"] == {"docker", "git"}
-
-
-def test_hybrid_merge_lets_the_primary_win_a_priority_conflict():
-    """The LLM calling something nice-to-have beats the regex calling it must."""
-    primary = {"jd_must_have": set(), "jd_nice_to_have": {"docker"}, "resume_skills": set()}
-    secondary = {"jd_must_have": {"docker"}, "jd_nice_to_have": set(), "resume_skills": set()}
-    merged = run_eval.Extractor._merge(primary, secondary)
-    assert merged["jd_nice_to_have"] == {"docker"}
-    assert merged["jd_must_have"] == set()
-
-
-def test_merged_lists_are_always_disjoint():
-    primary = {"jd_must_have": {"python"}, "jd_nice_to_have": {"go"}, "resume_skills": set()}
-    secondary = {"jd_must_have": {"go"}, "jd_nice_to_have": {"python"}, "resume_skills": set()}
-    merged = run_eval.Extractor._merge(primary, secondary)
-    assert merged["jd_must_have"] & merged["jd_nice_to_have"] == set()
-
-
-# ---------------------------------------------------------------------------
 # Deterministic extraction never reports a skill as both priorities
 # ---------------------------------------------------------------------------
+
+
+def test_llm_mode_without_a_key_exits_with_guidance(tmp_path, monkeypatch):
+    """CI runs deterministic only, so this must fail loudly rather than hang."""
+    monkeypatch.setenv("LLM_API_KEY", "")
+    with pytest.raises(SystemExit, match="LLM_API_KEY"):
+        run_eval.Extractor("llm")
+
+
+def test_hybrid_mode_without_a_key_also_exits(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "")
+    with pytest.raises(SystemExit):
+        run_eval.Extractor("hybrid")
+
+
+def test_deterministic_mode_needs_no_key(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "")
+    assert run_eval.Extractor("deterministic").mode == "deterministic"
 
 
 def test_deterministic_extraction_yields_disjoint_priorities(tmp_path):
@@ -272,3 +260,121 @@ def test_min_f1_gate_fails_loudly_when_nothing_is_labeled(tmp_path):
         ["--data-dir", str(data), "--results-dir", str(tmp_path / "r"), "--min-f1", "0.5"]
     )
     assert exit_code == 1
+
+
+# ---------------------------------------------------------------------------
+# llm and hybrid modes, with the provider stubbed
+# ---------------------------------------------------------------------------
+
+
+class _StubProvider:
+    """Returns the same valid extraction for any document."""
+
+    def __init__(self, payload: str):
+        self.payload = payload
+        self.calls = 0
+
+    def generate_json(self, system, user, schema):
+        self.calls += 1
+        return self.payload
+
+
+def _install_stub_extractor(monkeypatch, jd_json: str, resume_json: str):
+    """Make run_eval.Extractor build an LLMExtractor wired to stub responses."""
+    from core.extraction.llm_extractor import LLMExtractor
+
+    class _Alternating:
+        """JD and resume prompts are distinguishable by their system prompt."""
+
+        calls = 0
+
+        def generate_json(self, system, user, schema):
+            _Alternating.calls += 1
+            return jd_json if "job descriptions" in system else resume_json
+
+    monkeypatch.setattr(
+        run_eval, "LLMExtractor", lambda: LLMExtractor(provider=_Alternating())
+    )
+
+
+def test_llm_mode_runs_end_to_end(tmp_path, monkeypatch, capsys):
+    data = tmp_path / "data"
+    write_case(
+        data,
+        "c1",
+        {"jd_must_have": ["python"], "resume_skills": ["python"]},
+        jd="Required: Python",
+        resume="Skills\nPython",
+    )
+    _install_stub_extractor(
+        monkeypatch,
+        json.dumps(
+            {
+                "title": "Engineer",
+                "requirements": [
+                    {"skill": "Python", "priority": "must", "evidence": "Required: Python"}
+                ],
+            }
+        ),
+        json.dumps({"skills": [{"skill": "Python", "evidence": "Python"}]}),
+    )
+
+    exit_code = run_eval.main(
+        ["--mode", "llm", "--data-dir", str(data), "--results-dir", str(tmp_path / "r")]
+    )
+    assert exit_code == 0
+
+    report = json.loads((tmp_path / "r" / "llm.json").read_text(encoding="utf-8"))
+    assert report["mode"] == "llm"
+    assert report["per_case"][0]["extraction_path"] == "llm/llm"
+    assert report["micro_average"]["f1"] == pytest.approx(1.0)
+
+
+def test_hybrid_mode_runs_end_to_end(tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    write_case(
+        data,
+        "c1",
+        {"jd_must_have": ["python", "docker"], "resume_skills": ["python"]},
+        jd="Required: Python and Docker",
+        resume="Skills\nPython",
+    )
+    _install_stub_extractor(
+        monkeypatch,
+        json.dumps(
+            {
+                "requirements": [
+                    {
+                        "skill": "Python",
+                        "priority": "must",
+                        "evidence": "Required: Python and Docker",
+                    }
+                ]
+            }
+        ),
+        json.dumps({"skills": [{"skill": "Python", "evidence": "Python"}]}),
+    )
+
+    exit_code = run_eval.main(
+        ["--mode", "hybrid", "--data-dir", str(data), "--results-dir", str(tmp_path / "r")]
+    )
+    assert exit_code == 0
+
+    report = json.loads((tmp_path / "r" / "hybrid.json").read_text(encoding="utf-8"))
+    assert report["per_case"][0]["extraction_path"] == "hybrid/hybrid"
+    # Docker comes only from the deterministic side, so hybrid must find both.
+    assert set(report["per_case"][0]["predicted"]["jd_must_have"]) == {"python", "docker"}
+
+
+def test_hybrid_falls_back_when_the_provider_misbehaves(tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    write_case(data, "c1", {"jd_must_have": ["python"]}, jd="Required: Python")
+    _install_stub_extractor(monkeypatch, "not json", "not json")
+
+    exit_code = run_eval.main(
+        ["--mode", "hybrid", "--data-dir", str(data), "--results-dir", str(tmp_path / "r")]
+    )
+    assert exit_code == 0
+    report = json.loads((tmp_path / "r" / "hybrid.json").read_text(encoding="utf-8"))
+    assert report["per_case"][0]["extraction_path"] == "fallback/fallback"
+    assert "python" in report["per_case"][0]["predicted"]["jd_must_have"]

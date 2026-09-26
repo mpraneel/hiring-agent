@@ -1,6 +1,6 @@
 {
   "mode": "deterministic",
-  "generated_at": "2026-09-26T23:41:42+00:00",
+  "generated_at": "2026-09-26T23:48:01+00:00",
   "cases_discovered": 2,
   "cases_labeled": 0,
   "per_field": {
@@ -46,6 +46,7 @@
     {
       "case_id": "case_001_backend_python",
       "labeled": false,
+      "extraction_path": "deterministic/deterministic",
       "predicted": {
         "jd_must_have": [
           "docker",
@@ -89,6 +90,7 @@
     {
       "case_id": "case_002_frontend_react",
       "labeled": false,
+      "extraction_path": "deterministic/deterministic",
       "predicted": {
         "jd_must_have": [
           "accessibility",

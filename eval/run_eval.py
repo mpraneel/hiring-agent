@@ -24,8 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core.parsers.jd_parser import JDParser  # noqa: E402
-from core.parsers.resume_parser import ResumeParser  # noqa: E402
+from core.extraction.llm_extractor import LLMExtractor  # noqa: E402
 
 Mode = Literal["deterministic", "llm", "hybrid"]
 MODES: tuple[Mode, ...] = ("deterministic", "llm", "hybrid")
@@ -164,75 +163,42 @@ def load_cases(data_dir: Path) -> list[Case]:
 
 
 class Extractor:
-    """Runs one extraction mode over a case and returns canonical skill sets."""
+    """Runs one extraction mode over a case and returns canonical skill sets.
+
+    All three modes delegate to LLMExtractor, which owns the fallback and the
+    hybrid merge rules. Reimplementing the merge here would give the eval a
+    different definition of "hybrid" than the API serves, which would make the
+    reported numbers describe code nobody runs.
+    """
 
     def __init__(self, mode: Mode) -> None:
         self.mode = mode
-        self.jd_parser = JDParser()
-        self.resume_parser = ResumeParser()
-        self._llm = None
-        if mode in ("llm", "hybrid"):
-            self._llm = self._load_llm_extractor()
-
-    @staticmethod
-    def _load_llm_extractor():
-        try:
-            from core.extraction.llm_extractor import LLMExtractor
-        except ImportError as exc:
+        self._extractor = LLMExtractor()
+        if mode in ("llm", "hybrid") and not self._extractor.available:
             raise SystemExit(
-                "LLM extraction is not available yet (Phase 3 adds "
-                "core/extraction/llm_extractor.py). Run with "
-                "--mode deterministic for now.\n"
-                f"  underlying import error: {exc}"
-            ) from exc
-        return LLMExtractor()
+                f"--mode {mode} needs an LLM provider, but LLM_API_KEY is not set.\n"
+                "Set it in .env, or run with --mode deterministic."
+            )
+        self.paths: dict[str, str] = {}
 
     def extract(self, case: Case) -> dict[str, set[str]]:
-        deterministic = self._extract_deterministic(case)
-        if self.mode == "deterministic":
-            return deterministic
+        jd = self._extractor.parse_jd(case.jd_text, mode=self.mode)
+        resume = self._extractor.parse_resume(case.resume_text, mode=self.mode)
+        self.paths[case.case_id] = f"{jd.extraction_path}/{resume.extraction_path}"
 
-        llm = self._extract_llm(case)
-        if self.mode == "llm":
-            return llm
-
-        return self._merge(llm, deterministic)
-
-    def _extract_deterministic(self, case: Case) -> dict[str, set[str]]:
-        jd = self.jd_parser.parse_jd(case.jd_text)
-        resume = self.resume_parser.parse_text(case.resume_text)
-        must = {s.strip().lower() for s in jd.must_have_skills if s.strip()}
-        nice = {s.strip().lower() for s in jd.nice_to_have_skills if s.strip()}
+        must = _clean_set(jd.must_have_skills)
+        nice = _clean_set(jd.nice_to_have_skills)
         return {
             "jd_must_have": must,
+            # Belt and braces: the parsers already keep these disjoint, but the
+            # metric would silently double count a skill if they ever did not.
             "jd_nice_to_have": nice - must,
-            "resume_skills": {s.strip().lower() for s in resume.skills_norm if s.strip()},
+            "resume_skills": _clean_set(resume.skills_norm),
         }
 
-    def _extract_llm(self, case: Case) -> dict[str, set[str]]:
-        assert self._llm is not None
-        jd = self._llm.extract_jd(case.jd_text)
-        resume = self._llm.extract_resume(case.resume_text)
-        must = {r.skill.lower() for r in jd.requirements if r.priority == "must"}
-        nice = {r.skill.lower() for r in jd.requirements if r.priority == "nice"}
-        return {
-            "jd_must_have": must,
-            "jd_nice_to_have": nice - must,
-            "resume_skills": {s.skill.lower() for s in resume.skills},
-        }
 
-    @staticmethod
-    def _merge(primary: dict[str, set[str]], secondary: dict[str, set[str]]) -> dict[str, set[str]]:
-        """Union of both extractors, with the primary winning priority conflicts."""
-        must = primary["jd_must_have"] | secondary["jd_must_have"]
-        nice = primary["jd_nice_to_have"] | secondary["jd_nice_to_have"]
-        # A skill the primary calls nice stays nice even if the secondary said must.
-        must -= primary["jd_nice_to_have"]
-        return {
-            "jd_must_have": must,
-            "jd_nice_to_have": nice - must,
-            "resume_skills": primary["resume_skills"] | secondary["resume_skills"],
-        }
+def _clean_set(values: list[str]) -> set[str]:
+    return {v.strip().lower() for v in values if v and v.strip()}
 
 
 # ---------------------------------------------------------------------------
@@ -240,7 +206,9 @@ class Extractor:
 # ---------------------------------------------------------------------------
 
 
-def evaluate(cases: list[Case], mode: Mode) -> tuple[list[CaseOutcome], dict[str, Counts], int, int]:
+def evaluate(
+    cases: list[Case], mode: Mode
+) -> tuple[list[CaseOutcome], dict[str, Counts], int, int, dict[str, str]]:
     extractor = Extractor(mode)
     outcomes: list[CaseOutcome] = []
     totals = {f: Counts() for f in FIELDS}
@@ -269,7 +237,7 @@ def evaluate(cases: list[Case], mode: Mode) -> tuple[list[CaseOutcome], dict[str
 
         outcomes.append(outcome)
 
-    return outcomes, totals, correct, total
+    return outcomes, totals, correct, total, extractor.paths
 
 
 def format_metric(value: Optional[float]) -> str:
@@ -343,6 +311,7 @@ def build_report(
     cases: list[Case],
     correct: int,
     total: int,
+    paths: Optional[dict[str, str]] = None,
 ) -> dict:
     overall = Counts()
     for name in FIELDS:
@@ -365,6 +334,7 @@ def build_report(
             {
                 "case_id": outcome.case_id,
                 "labeled": bool(outcome.counts),
+                "extraction_path": (paths or {}).get(outcome.case_id),
                 "predicted": {name: sorted(outcome.predicted[name]) for name in FIELDS},
                 "counts": {name: c.to_dict() for name, c in outcome.counts.items()},
                 "classification": {
@@ -404,12 +374,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"error: no usable cases in {args.data_dir}", file=sys.stderr)
         return 2
 
-    outcomes, totals, correct, total = evaluate(cases, args.mode)
+    outcomes, totals, correct, total, paths = evaluate(cases, args.mode)
     labeled = [c for c in cases if c.is_labeled]
 
     print(render_markdown(args.mode, totals, len(cases), len(labeled), correct, total))
 
-    report = build_report(args.mode, outcomes, totals, cases, correct, total)
+    report = build_report(args.mode, outcomes, totals, cases, correct, total, paths)
     if not args.no_write:
         args.results_dir.mkdir(parents=True, exist_ok=True)
         out_path = args.results_dir / f"{args.mode}.json"
