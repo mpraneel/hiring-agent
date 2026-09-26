@@ -55,30 +55,17 @@ def test_parse_pdf_raises_on_a_non_pdf(parser, tmp_path):
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: _is_section_header uses re.search, so any line containing "
-    "'experience' opens or closes a section",
-    strict=True,
-)
 def test_prose_mentioning_experience_is_not_a_section_header(parser):
     line = "Backend engineer who gained experience in distributed systems."
     assert parser._is_section_header(line, ["skills"]) is False
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: a summary paragraph containing 'experience' breaks skills detection",
-    strict=True,
-)
 def test_skills_are_found_despite_a_summary_paragraph(parser, sample_resume_text):
     parsed = parser.parse_text(sample_resume_text)
     assert "python" in parsed.skills_norm
     assert "docker" in parsed.skills_norm
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: a header must be a short line matching a header name exactly",
-    strict=True,
-)
 def test_long_line_is_never_a_section_header(parser):
     long_line = "Skills developed across six years of backend and platform engineering work"
     assert parser._is_section_header(long_line, ["skills"]) is False
@@ -95,10 +82,6 @@ def test_header_variants_are_recognised(parser, header):
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: _extract_skills splits on a hyphen, breaking hyphenated skill names",
-    strict=True,
-)
 @pytest.mark.parametrize("skill", ["scikit-learn", "ci-cd", "c-sharp"])
 def test_hyphenated_skills_are_not_split(parser, skill):
     extracted = parser._extract_skills(["Python, " + skill + ", Docker"])
@@ -115,10 +98,6 @@ def test_comma_separated_skills_are_split(parser):
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: company, start and end on CandidateExperience are never populated",
-    strict=True,
-)
 def test_experience_captures_company_and_dates(parser):
     text = "\n".join(
         [
