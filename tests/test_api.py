@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
-from core.schemas.models import MatchResult
+from core.extraction.models import MatchExplanation
 
 
 @pytest.fixture
@@ -27,24 +27,32 @@ def resume_upload(make_pdf, sample_resume_lines):
 
 
 class StubOverlay:
-    """Stand-in for LLMOverlay with no network access."""
+    """Stand-in for LLMOverlay with no network access.
 
-    def __init__(self, rationale="Solid overlap on the must-have skills.", suggestions=None, fail=False):
+    Records the breakdown it was handed so a test can assert what the
+    explanation layer is allowed to see.
+    """
+
+    def __init__(
+        self,
+        rationale="Solid overlap on the must-have skills.",
+        suggestions=None,
+        fail=False,
+    ):
         self.rationale = rationale
-        self.suggestions = suggestions if suggestions is not None else ["Add a Kubernetes bullet."]
+        self.suggestions = (
+            suggestions if suggestions is not None else ["Add a Kubernetes bullet."]
+        )
         self.fail = fail
         self.calls = 0
+        self.seen_breakdowns = []
 
-    def generate_rationale(self, resume, jd, match_result):
+    def explain(self, breakdown):
         self.calls += 1
+        self.seen_breakdowns.append(breakdown)
         if self.fail:
             raise RuntimeError("provider exploded: secret-key-abc123 leaked in message")
-        return self.rationale
-
-    def generate_suggestions(self, resume, jd, match_result):
-        if self.fail:
-            raise RuntimeError("provider exploded: secret-key-abc123 leaked in message")
-        return list(self.suggestions)
+        return MatchExplanation(rationale=self.rationale, suggestions=list(self.suggestions))
 
 
 @pytest.fixture
@@ -169,9 +177,20 @@ def test_missing_job_description_is_a_422(client, resume_upload):
     assert response.status_code == 422
 
 
-def test_missing_resume_is_a_422(client, sample_jd):
+def test_missing_both_resume_inputs_is_a_400(client, sample_jd):
+    """Either input satisfies the requirement, so neither is a validation 400."""
     response = client.post("/api/v1/match", data={"job_description": sample_jd})
-    assert response.status_code == 422
+    assert response.status_code == 400
+    assert "resume" in response.text.lower()
+
+
+def test_supplying_both_resume_inputs_is_a_400(client, resume_upload, sample_jd, sample_resume_text):
+    response = client.post(
+        "/api/v1/match",
+        files={"resume_pdf": resume_upload},
+        data={"job_description": sample_jd, "resume_text": sample_resume_text},
+    )
+    assert response.status_code == 400
 
 
 def test_oversized_pdf_is_rejected(client, sample_jd):
@@ -230,10 +249,6 @@ def test_llm_failure_still_returns_a_score(client, resume_upload, sample_jd, wit
     assert 0.0 <= response.json()["match_score"] <= 1.0
 
 
-@pytest.mark.xfail(
-    reason="Phase 4: exception text reaches the client instead of llm_status unavailable",
-    strict=True,
-)
 def test_llm_failure_does_not_leak_exception_text(client, resume_upload, sample_jd, with_stub_llm):
     with_stub_llm(fail=True)
     body = client.post(
@@ -247,7 +262,6 @@ def test_llm_failure_does_not_leak_exception_text(client, resume_upload, sample_
     assert body["llm_rationale"] is None
 
 
-@pytest.mark.xfail(reason="Phase 4: MatchResult has no llm_status field yet", strict=True)
 def test_llm_status_is_reported(client, resume_upload, sample_jd, with_stub_llm):
     with_stub_llm(fail=True)
     body = client.post(
@@ -258,7 +272,6 @@ def test_llm_status_is_reported(client, resume_upload, sample_jd, with_stub_llm)
     assert body["llm_status"] == "unavailable"
 
 
-@pytest.mark.xfail(reason="Phase 3: extraction_path is not recorded yet", strict=True)
 def test_extraction_path_is_reported(client, resume_upload, sample_jd):
     body = client.post(
         "/api/v1/match",
@@ -307,11 +320,6 @@ def test_handled_error_reports_the_same_id_it_logged(client, resume_upload, samp
     assert detail["request_id"] in caplog.text
 
 
-@pytest.mark.xfail(
-    reason="Phase 4: the global handler mints a fresh request_id instead of reusing "
-    "the one attached to the failing request",
-    strict=True,
-)
 @pytest.mark.asyncio
 async def test_global_handler_reuses_the_request_id():
     """The bug the spec records lives in the global handler, not the route.
@@ -334,7 +342,6 @@ async def test_global_handler_reuses_the_request_id():
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(reason="Phase 6: resume_text form field does not exist yet", strict=True)
 def test_resume_text_is_accepted_instead_of_a_pdf(client, sample_resume_text, sample_jd):
     response = client.post(
         "/api/v1/match",

@@ -128,7 +128,11 @@ class ResumeParser:
 
     def parse_pdf(self, pdf_path: str) -> ParsedResume:
         """Parse a PDF resume into structured data."""
-        return self._parse_text(self._extract_text_from_pdf(pdf_path))
+        return self._parse_text(self.extract_pdf_text(pdf_path))
+
+    def extract_pdf_text(self, pdf_path: str) -> str:
+        """Extract the plain text of a PDF, for callers that parse it separately."""
+        return self._extract_text_from_pdf(pdf_path)
 
     def parse_text(self, text: str) -> ParsedResume:
         """Parse resume text into structured data."""
