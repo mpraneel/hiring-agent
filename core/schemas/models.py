@@ -8,6 +8,10 @@ from pydantic import BaseModel, Field
 # and failed, which is worth distinguishing from never having tried it.
 ExtractionPath = Literal["llm", "deterministic", "fallback", "hybrid"]
 
+# Whether the explanation layer ran. "disabled" means no key was configured,
+# "unavailable" means it was tried and failed. The score is unaffected either way.
+LLMStatus = Literal["ok", "unavailable", "disabled"]
+
 
 class CandidateExperience(BaseModel):
     """One role from a resume's experience section."""
@@ -73,3 +77,5 @@ class MatchResult(BaseModel):
     baseline_score: float = Field(ge=0.0, le=1.0)
     llm_rationale: Optional[str] = None
     suggestions: List[str] = Field(default_factory=list)
+    extraction_path: ExtractionPath = "deterministic"
+    llm_status: LLMStatus = "disabled"
