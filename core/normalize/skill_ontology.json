@@ -1,161 +1,887 @@
 {
-  "typescript": ["ts", "type script", "typescript", "node+ts"],
-  "javascript": ["js", "java script", "javascript", "node"],
-  "react": ["react.js", "reactjs", "react"],
-  "python": ["py", "python", "cpython"],
-  "aws": ["amazon web services", "aws", "eb", "s3", "ec2"],
-  "mongo": ["mongodb", "mongo"],
-  "sql": ["postgres", "mysql", "sql", "sqlite"],
-  "flask": ["flask", "flask api"],
-  "docker": ["docker", "container"],
-  "jenkins": ["jenkins", "ci cd", "ci"],
-  "git": ["git", "github", "gitlab"],
-  "html": ["html", "html5"],
-  "css": ["css", "css3"],
-  "java": ["java", "j2ee", "spring"],
-  "c++": ["c++", "cpp", "c plus plus"],
-  "c#": ["c#", "csharp", "dotnet"],
-  "go": ["go", "golang"],
-  "rust": ["rust", "rustlang"],
-  "kubernetes": ["kubernetes", "k8s", "kube"],
-  "terraform": ["terraform", "iac"],
-  "ansible": ["ansible", "automation"],
-  "nginx": ["nginx", "web server"],
-  "apache": ["apache", "httpd"],
-  "redis": ["redis", "cache"],
-  "elasticsearch": ["elasticsearch", "elastic", "es"],
-  "kafka": ["kafka", "message queue"],
-  "rabbitmq": ["rabbitmq", "amqp"],
-  "graphql": ["graphql", "gql"],
-  "rest": ["rest", "rest api", "api"],
-  "microservices": ["microservices", "micro service"],
-  "serverless": ["serverless", "lambda"],
-  "machine learning": ["machine learning", "ml", "ai"],
-  "deep learning": ["deep learning", "neural networks"],
-  "tensorflow": ["tensorflow", "tf"],
-  "pytorch": ["pytorch", "torch"],
-  "scikit-learn": ["scikit-learn", "sklearn"],
-  "pandas": ["pandas", "pd"],
-  "numpy": ["numpy", "np"],
-  "matplotlib": ["matplotlib", "plotting"],
-  "seaborn": ["seaborn", "visualization"],
-  "jupyter": ["jupyter", "notebook"],
-  "tableau": ["tableau", "bi"],
-  "powerbi": ["powerbi", "power bi"],
-  "excel": ["excel", "spreadsheet"],
-  "agile": ["agile", "scrum", "kanban"],
-  "jira": ["jira", "project management"],
-  "confluence": ["confluence", "documentation"],
-  "slack": ["slack", "communication"],
-  "teams": ["teams", "microsoft teams"],
-  "figma": ["figma", "design"],
-  "sketch": ["sketch", "ui design"],
-  "adobe": ["adobe", "photoshop", "illustrator"],
-  "android": ["android", "mobile development"],
-  "ios": ["ios", "iphone", "swift"],
-  "flutter": ["flutter", "cross platform"],
-  "react native": ["react native", "reactnative"],
-  "wordpress": ["wordpress", "cms"],
-  "shopify": ["shopify", "ecommerce"],
-  "salesforce": ["salesforce", "crm"],
-  "google analytics": ["google analytics", "ga", "analytics"],
-  "seo": ["seo", "search engine optimization"],
-  "email marketing": ["email marketing", "mailchimp"],
-  "blockchain": ["blockchain", "cryptocurrency", "bitcoin"],
-  "ethereum": ["ethereum", "smart contracts"],
-  "solidity": ["solidity", "smart contract language"],
-  "web3": ["web3", "decentralized web"],
-  "iot": ["iot", "internet of things"],
-  "cloud computing": ["cloud computing", "cloud"],
-  "big data": ["big data", "data engineering"],
-  "data science": ["data science", "data scientist"],
-  "data engineering": ["data engineering", "etl"],
-  "data analyst": ["data analyst", "business intelligence"],
-  "business analyst": ["business analyst", "requirements"],
-  "product manager": ["product manager", "product management"],
-  "project manager": ["project manager", "project management"],
-  "scrum master": ["scrum master", "agile coach"],
-  "devops": ["devops", "development operations"],
-  "site reliability": ["site reliability", "sre"],
-  "security": ["security", "cybersecurity", "infosec"],
-  "penetration testing": ["penetration testing", "pentest"],
-  "compliance": ["compliance", "gdpr", "hipaa"],
-  "accessibility": ["accessibility", "a11y"],
-  "performance": ["performance", "optimization"],
-  "testing": ["testing", "qa", "quality assurance"],
-  "unit testing": ["unit testing", "unit tests"],
-  "integration testing": ["integration testing", "integration tests"],
-  "end to end testing": ["end to end testing", "e2e", "cypress"],
-  "selenium": ["selenium", "webdriver"],
-  "playwright": ["playwright", "browser automation"],
-  "postman": ["postman", "api testing"],
-  "swagger": ["swagger", "openapi"],
-  "grpc": ["grpc", "rpc"],
-  "websocket": ["websocket", "real time"],
-  "socket.io": ["socket.io", "websocket library"],
-  "oauth": ["oauth", "authentication"],
-  "jwt": ["jwt", "json web token"],
-  "ldap": ["ldap", "active directory"],
-  "saml": ["saml", "single sign on"],
-  "oauth2": ["oauth2", "openid connect"],
-  "mfa": ["mfa", "multi factor authentication"],
-  "2fa": ["2fa", "two factor authentication"],
-  "encryption": ["encryption", "cryptography"],
-  "hashing": ["hashing", "password hashing"],
-  "bcrypt": ["bcrypt", "password hashing"],
-  "argon2": ["argon2", "password hashing"],
-  "rate limiting": ["rate limiting", "throttling"],
-  "load balancing": ["load balancing", "load balancer"],
-  "cdn": ["cdn", "content delivery network"],
-  "caching": ["caching", "cache"],
-  "memcached": ["memcached", "memory cache"],
-  "varnish": ["varnish", "http cache"],
-  "monitoring": ["monitoring", "observability"],
-  "logging": ["logging", "log management"],
-  "metrics": ["metrics", "telemetry"],
-  "tracing": ["tracing", "distributed tracing"],
-  "prometheus": ["prometheus", "metrics"],
-  "grafana": ["grafana", "dashboard"],
-  "datadog": ["datadog", "monitoring"],
-  "sentry": ["sentry", "error tracking"],
-  "elasticsearch": ["elasticsearch", "search engine"],
-  "kibana": ["kibana", "visualization"],
-  "splunk": ["splunk", "log analysis"],
-  "cloudwatch": ["cloudwatch", "aws monitoring"],
-  "heroku": ["heroku", "paas"],
-  "vercel": ["vercel", "deployment"],
-  "netlify": ["netlify", "static hosting"],
-  "cloudflare": ["cloudflare", "cdn and security"],
-  "aws lambda": ["aws lambda", "serverless function"],
-  "google cloud functions": ["google cloud functions", "gcp serverless"],
-  "azure functions": ["azure functions", "azure serverless"],
-  "aws api gateway": ["aws api gateway", "api management"],
-  "kong": ["kong", "api gateway"],
-  "swagger ui": ["swagger ui", "api documentation"],
-  "redoc": ["redoc", "api documentation"],
-  "curl": ["curl", "http client"],
-  "powershell": ["powershell", "windows scripting"],
-  "bash": ["bash", "shell scripting"],
-  "zsh": ["zsh", "shell"],
-  "awk": ["awk", "text processing"],
-  "sed": ["sed", "stream editor"],
-  "grep": ["grep", "text search"],
-  "find": ["find", "file search"],
-  "ssh": ["ssh", "secure shell"],
-  "ftp": ["ftp", "file transfer protocol"],
-  "http": ["http", "hypertext transfer protocol"],
-  "https": ["https", "secure http"],
-  "tcp": ["tcp", "transmission control protocol"],
-  "udp": ["udp", "user datagram protocol"],
-  "dns": ["dns", "domain name system"],
-  "dhcp": ["dhcp", "dynamic host configuration"],
-  "vpn": ["vpn", "virtual private network"],
-  "ping": ["ping", "network connectivity"],
-  "traceroute": ["traceroute", "network path"],
-  "nmap": ["nmap", "network scanning"],
-  "wireshark": ["wireshark", "packet analysis"],
-  "iptables": ["iptables", "firewall"],
-  "fail2ban": ["fail2ban", "intrusion prevention"],
-  "auditd": ["auditd", "linux auditing"],
-  "sysmon": ["sysmon", "windows monitoring"]
+  "2fa": [
+    "2fa"
+  ],
+  "accessibility": [
+    "accessibility",
+    "a11y"
+  ],
+  "adobe": [
+    "adobe",
+    "photoshop",
+    "illustrator"
+  ],
+  "agile": [
+    "agile",
+    "scrum",
+    "kanban"
+  ],
+  "airflow": [
+    "airflow",
+    "apache airflow"
+  ],
+  "android": [
+    "android"
+  ],
+  "angular": [
+    "angular",
+    "angularjs"
+  ],
+  "ansible": [
+    "ansible"
+  ],
+  "apache": [
+    "apache"
+  ],
+  "argocd": [
+    "argocd",
+    "argo cd"
+  ],
+  "argon2": [
+    "argon2"
+  ],
+  "auditd": [
+    "auditd"
+  ],
+  "awk": [
+    "awk"
+  ],
+  "aws": [
+    "amazon web services",
+    "aws",
+    "eb",
+    "s3",
+    "ec2"
+  ],
+  "aws api gateway": [
+    "aws api gateway"
+  ],
+  "aws lambda": [
+    "aws lambda"
+  ],
+  "azure": [
+    "azure",
+    "microsoft azure"
+  ],
+  "azure functions": [
+    "azure functions"
+  ],
+  "babel": [
+    "babel"
+  ],
+  "bash": [
+    "bash"
+  ],
+  "bcrypt": [
+    "bcrypt"
+  ],
+  "big data": [
+    "big data"
+  ],
+  "bigquery": [
+    "bigquery",
+    "big query"
+  ],
+  "blockchain": [
+    "blockchain",
+    "bitcoin"
+  ],
+  "business analyst": [
+    "business analyst"
+  ],
+  "c#": [
+    "c#",
+    "csharp",
+    "dotnet"
+  ],
+  "c++": [
+    "c++",
+    "cpp",
+    "c plus plus"
+  ],
+  "caching": [
+    "caching"
+  ],
+  "cassandra": [
+    "cassandra"
+  ],
+  "cdn": [
+    "cdn"
+  ],
+  "celery": [
+    "celery"
+  ],
+  "ci/cd": [
+    "ci/cd",
+    "ci cd",
+    "cicd",
+    "continuous integration",
+    "continuous delivery",
+    "continuous deployment"
+  ],
+  "circleci": [
+    "circleci",
+    "circle ci"
+  ],
+  "clojure": [
+    "clojure"
+  ],
+  "cloud computing": [
+    "cloud computing",
+    "cloud"
+  ],
+  "cloudflare": [
+    "cloudflare"
+  ],
+  "cloudwatch": [
+    "cloudwatch"
+  ],
+  "compliance": [
+    "compliance",
+    "gdpr",
+    "hipaa"
+  ],
+  "computer vision": [
+    "computer vision"
+  ],
+  "confluence": [
+    "confluence"
+  ],
+  "css": [
+    "css",
+    "css3"
+  ],
+  "curl": [
+    "curl"
+  ],
+  "dart": [
+    "dart"
+  ],
+  "data analyst": [
+    "data analyst"
+  ],
+  "data engineering": [
+    "data engineering",
+    "etl"
+  ],
+  "data science": [
+    "data science"
+  ],
+  "databricks": [
+    "databricks"
+  ],
+  "datadog": [
+    "datadog"
+  ],
+  "dbeaver": [
+    "dbeaver"
+  ],
+  "dbt": [
+    "dbt"
+  ],
+  "deep learning": [
+    "deep learning"
+  ],
+  "devops": [
+    "devops"
+  ],
+  "dhcp": [
+    "dhcp"
+  ],
+  "digitalocean": [
+    "digitalocean",
+    "digital ocean"
+  ],
+  "django": [
+    "django"
+  ],
+  "dns": [
+    "dns"
+  ],
+  "docker": [
+    "docker"
+  ],
+  "dynamodb": [
+    "dynamodb",
+    "dynamo db"
+  ],
+  "elasticsearch": [
+    "elasticsearch",
+    "elastic",
+    "es"
+  ],
+  "elixir": [
+    "elixir"
+  ],
+  "email marketing": [
+    "email marketing",
+    "mailchimp"
+  ],
+  "encryption": [
+    "encryption"
+  ],
+  "end to end testing": [
+    "end to end testing",
+    "e2e",
+    "cypress"
+  ],
+  "esbuild": [
+    "esbuild"
+  ],
+  "ethereum": [
+    "ethereum"
+  ],
+  "excel": [
+    "excel"
+  ],
+  "express": [
+    "express",
+    "express.js",
+    "expressjs"
+  ],
+  "fail2ban": [
+    "fail2ban"
+  ],
+  "fastapi": [
+    "fastapi",
+    "fast api"
+  ],
+  "figma": [
+    "figma"
+  ],
+  "find": [
+    "find"
+  ],
+  "firebase": [
+    "firebase"
+  ],
+  "flask": [
+    "flask",
+    "flask api"
+  ],
+  "flink": [
+    "flink",
+    "apache flink"
+  ],
+  "flutter": [
+    "flutter"
+  ],
+  "ftp": [
+    "ftp"
+  ],
+  "gcp": [
+    "gcp",
+    "google cloud",
+    "google cloud platform"
+  ],
+  "git": [
+    "git",
+    "github",
+    "gitlab"
+  ],
+  "github actions": [
+    "github actions"
+  ],
+  "gitlab ci": [
+    "gitlab ci",
+    "gitlab-ci"
+  ],
+  "go": [
+    "go",
+    "golang"
+  ],
+  "google analytics": [
+    "google analytics",
+    "ga",
+    "analytics"
+  ],
+  "google cloud functions": [
+    "google cloud functions"
+  ],
+  "grafana": [
+    "grafana"
+  ],
+  "graphql": [
+    "graphql",
+    "gql"
+  ],
+  "grep": [
+    "grep"
+  ],
+  "grpc": [
+    "grpc",
+    "rpc"
+  ],
+  "hadoop": [
+    "hadoop"
+  ],
+  "hashing": [
+    "hashing"
+  ],
+  "haskell": [
+    "haskell"
+  ],
+  "helm": [
+    "helm"
+  ],
+  "heroku": [
+    "heroku"
+  ],
+  "html": [
+    "html",
+    "html5"
+  ],
+  "http": [
+    "http"
+  ],
+  "https": [
+    "https"
+  ],
+  "hugging face": [
+    "hugging face",
+    "huggingface",
+    "transformers"
+  ],
+  "integration testing": [
+    "integration testing"
+  ],
+  "ios": [
+    "ios",
+    "iphone",
+    "swift"
+  ],
+  "iot": [
+    "iot"
+  ],
+  "iptables": [
+    "iptables",
+    "firewall"
+  ],
+  "java": [
+    "java",
+    "j2ee",
+    "spring"
+  ],
+  "javascript": [
+    "javascript",
+    "js",
+    "java script",
+    "ecmascript"
+  ],
+  "jenkins": [
+    "jenkins"
+  ],
+  "jest": [
+    "jest"
+  ],
+  "jira": [
+    "jira"
+  ],
+  "junit": [
+    "junit"
+  ],
+  "jupyter": [
+    "jupyter"
+  ],
+  "jwt": [
+    "jwt"
+  ],
+  "kafka": [
+    "kafka"
+  ],
+  "keras": [
+    "keras"
+  ],
+  "kibana": [
+    "kibana"
+  ],
+  "kong": [
+    "kong"
+  ],
+  "kotlin": [
+    "kotlin"
+  ],
+  "kubernetes": [
+    "kubernetes",
+    "k8s",
+    "kube"
+  ],
+  "laravel": [
+    "laravel"
+  ],
+  "ldap": [
+    "ldap"
+  ],
+  "less": [
+    "less",
+    "less css"
+  ],
+  "llm": [
+    "llm",
+    "large language model",
+    "large language models"
+  ],
+  "load balancing": [
+    "load balancing"
+  ],
+  "logging": [
+    "logging"
+  ],
+  "looker": [
+    "looker"
+  ],
+  "machine learning": [
+    "machine learning",
+    "ml"
+  ],
+  "mariadb": [
+    "mariadb"
+  ],
+  "matlab": [
+    "matlab"
+  ],
+  "matplotlib": [
+    "matplotlib"
+  ],
+  "memcached": [
+    "memcached"
+  ],
+  "metrics": [
+    "metrics"
+  ],
+  "mfa": [
+    "mfa"
+  ],
+  "microservices": [
+    "microservices"
+  ],
+  "mocha": [
+    "mocha"
+  ],
+  "mongo": [
+    "mongodb",
+    "mongo"
+  ],
+  "monitoring": [
+    "monitoring"
+  ],
+  "mysql": [
+    "mysql",
+    "my sql"
+  ],
+  "nats": [
+    "nats"
+  ],
+  "neo4j": [
+    "neo4j"
+  ],
+  "nestjs": [
+    "nestjs",
+    "nest.js"
+  ],
+  "netlify": [
+    "netlify"
+  ],
+  "next.js": [
+    "next.js",
+    "nextjs"
+  ],
+  "nginx": [
+    "nginx"
+  ],
+  "nlp": [
+    "nlp",
+    "natural language processing"
+  ],
+  "nmap": [
+    "nmap"
+  ],
+  "node.js": [
+    "node.js",
+    "nodejs",
+    "node"
+  ],
+  "numpy": [
+    "numpy",
+    "np"
+  ],
+  "nuxt": [
+    "nuxt",
+    "nuxt.js"
+  ],
+  "oauth": [
+    "oauth"
+  ],
+  "oauth2": [
+    "oauth2"
+  ],
+  "opencv": [
+    "opencv"
+  ],
+  "opentelemetry": [
+    "opentelemetry",
+    "otel"
+  ],
+  "pandas": [
+    "pandas",
+    "pd"
+  ],
+  "penetration testing": [
+    "penetration testing",
+    "pentest"
+  ],
+  "performance": [
+    "performance"
+  ],
+  "perl": [
+    "perl"
+  ],
+  "php": [
+    "php"
+  ],
+  "ping": [
+    "ping"
+  ],
+  "playwright": [
+    "playwright"
+  ],
+  "plotly": [
+    "plotly"
+  ],
+  "podman": [
+    "podman"
+  ],
+  "postgresql": [
+    "postgresql",
+    "postgres",
+    "psql"
+  ],
+  "postman": [
+    "postman"
+  ],
+  "powerbi": [
+    "powerbi",
+    "power bi"
+  ],
+  "powershell": [
+    "powershell"
+  ],
+  "prisma": [
+    "prisma"
+  ],
+  "product manager": [
+    "product manager",
+    "product management"
+  ],
+  "project manager": [
+    "project manager"
+  ],
+  "prometheus": [
+    "prometheus"
+  ],
+  "pulumi": [
+    "pulumi"
+  ],
+  "pydantic": [
+    "pydantic"
+  ],
+  "pytest": [
+    "pytest",
+    "py.test"
+  ],
+  "python": [
+    "py",
+    "python",
+    "cpython"
+  ],
+  "pytorch": [
+    "pytorch",
+    "torch"
+  ],
+  "r": [
+    "r"
+  ],
+  "rabbitmq": [
+    "rabbitmq",
+    "amqp"
+  ],
+  "rails": [
+    "rails",
+    "ruby on rails"
+  ],
+  "rate limiting": [
+    "rate limiting"
+  ],
+  "react": [
+    "react.js",
+    "reactjs",
+    "react"
+  ],
+  "react native": [
+    "react native",
+    "reactnative"
+  ],
+  "react query": [
+    "react query",
+    "tanstack query"
+  ],
+  "redis": [
+    "redis"
+  ],
+  "redoc": [
+    "redoc"
+  ],
+  "redshift": [
+    "redshift"
+  ],
+  "redux": [
+    "redux"
+  ],
+  "remix": [
+    "remix"
+  ],
+  "rest": [
+    "rest",
+    "rest api"
+  ],
+  "rollup": [
+    "rollup"
+  ],
+  "ruby": [
+    "ruby"
+  ],
+  "rust": [
+    "rust",
+    "rustlang"
+  ],
+  "salesforce": [
+    "salesforce"
+  ],
+  "saml": [
+    "saml"
+  ],
+  "sass": [
+    "sass",
+    "scss"
+  ],
+  "scala": [
+    "scala"
+  ],
+  "scikit-learn": [
+    "scikit-learn",
+    "sklearn"
+  ],
+  "scrum master": [
+    "scrum master"
+  ],
+  "seaborn": [
+    "seaborn"
+  ],
+  "security": [
+    "security",
+    "cybersecurity",
+    "infosec"
+  ],
+  "sed": [
+    "sed"
+  ],
+  "selenium": [
+    "selenium"
+  ],
+  "sentry": [
+    "sentry"
+  ],
+  "seo": [
+    "seo"
+  ],
+  "serverless": [
+    "serverless",
+    "lambda"
+  ],
+  "shopify": [
+    "shopify",
+    "ecommerce"
+  ],
+  "site reliability": [
+    "site reliability",
+    "sre"
+  ],
+  "sketch": [
+    "sketch"
+  ],
+  "slack": [
+    "slack"
+  ],
+  "snowflake": [
+    "snowflake"
+  ],
+  "socket.io": [
+    "socket.io"
+  ],
+  "solidity": [
+    "solidity"
+  ],
+  "spark": [
+    "spark",
+    "apache spark",
+    "pyspark"
+  ],
+  "splunk": [
+    "splunk"
+  ],
+  "spring boot": [
+    "spring boot",
+    "springboot"
+  ],
+  "sql": [
+    "sql",
+    "t-sql",
+    "tsql",
+    "pl/sql",
+    "ansi sql"
+  ],
+  "sqlalchemy": [
+    "sqlalchemy"
+  ],
+  "sqlite": [
+    "sqlite",
+    "sqlite3"
+  ],
+  "sqs": [
+    "sqs",
+    "amazon sqs"
+  ],
+  "ssh": [
+    "ssh"
+  ],
+  "starlette": [
+    "starlette"
+  ],
+  "storybook": [
+    "storybook"
+  ],
+  "styled components": [
+    "styled components",
+    "styled-components"
+  ],
+  "supabase": [
+    "supabase"
+  ],
+  "svelte": [
+    "svelte",
+    "sveltekit"
+  ],
+  "swagger": [
+    "swagger",
+    "openapi"
+  ],
+  "swagger ui": [
+    "swagger ui"
+  ],
+  "sysmon": [
+    "sysmon"
+  ],
+  "tableau": [
+    "tableau",
+    "bi"
+  ],
+  "tailwind": [
+    "tailwind",
+    "tailwindcss",
+    "tailwind css"
+  ],
+  "tcp": [
+    "tcp"
+  ],
+  "teams": [
+    "teams",
+    "microsoft teams"
+  ],
+  "tensorflow": [
+    "tensorflow",
+    "tf"
+  ],
+  "terraform": [
+    "terraform"
+  ],
+  "testing": [
+    "testing",
+    "qa"
+  ],
+  "testing library": [
+    "testing library",
+    "react testing library"
+  ],
+  "traceroute": [
+    "traceroute"
+  ],
+  "tracing": [
+    "tracing"
+  ],
+  "travis ci": [
+    "travis ci",
+    "travisci"
+  ],
+  "typescript": [
+    "ts",
+    "type script",
+    "typescript",
+    "node+ts"
+  ],
+  "udp": [
+    "udp"
+  ],
+  "unit testing": [
+    "unit testing"
+  ],
+  "unittest": [
+    "unittest"
+  ],
+  "vagrant": [
+    "vagrant"
+  ],
+  "varnish": [
+    "varnish"
+  ],
+  "vercel": [
+    "vercel"
+  ],
+  "vite": [
+    "vite"
+  ],
+  "vitest": [
+    "vitest"
+  ],
+  "vpn": [
+    "vpn"
+  ],
+  "vue": [
+    "vue",
+    "vue.js",
+    "vuejs"
+  ],
+  "web3": [
+    "web3"
+  ],
+  "webpack": [
+    "webpack"
+  ],
+  "websocket": [
+    "websocket"
+  ],
+  "wireshark": [
+    "wireshark"
+  ],
+  "wordpress": [
+    "wordpress"
+  ],
+  "xgboost": [
+    "xgboost"
+  ],
+  "zod": [
+    "zod"
+  ],
+  "zsh": [
+    "zsh"
+  ]
 }

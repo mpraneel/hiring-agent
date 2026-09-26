@@ -67,9 +67,9 @@ def test_get_skill_variants_returns_variants(normalizer):
 def test_elastic_variant_resolves_to_elasticsearch(normalizer):
     """Guards the duplicate-key fix.
 
-    This currently passes only because the substring fuzzy match rescues it.
-    Phase 2 deletes that fuzzy match, so it will pass afterwards only if the
-    duplicate elasticsearch key is merged and the 'elastic' variant restored.
+    Before Phase 2 this passed only because the substring fuzzy match rescued
+    it. With that match deleted, it passes only because the duplicate
+    elasticsearch key was merged and the 'elastic' variant restored.
     """
     assert normalizer.normalize_skill("elastic") == "elasticsearch"
 
@@ -79,10 +79,6 @@ def test_elastic_variant_resolves_to_elasticsearch(normalizer):
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: 'elasticsearch' is declared twice, so the first entry is discarded",
-    strict=True,
-)
 def test_ontology_has_no_duplicate_canonical_keys():
     raw = ONTOLOGY_PATH.read_text(encoding="utf-8")
     keys = re.findall(r'^\s{2}"([^"]+)":', raw, re.MULTILINE)
@@ -90,10 +86,6 @@ def test_ontology_has_no_duplicate_canonical_keys():
     assert duplicates == []
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: several generic variants are claimed by more than one canonical",
-    strict=True,
-)
 def test_every_variant_maps_to_exactly_one_canonical():
     ontology = json.loads(ONTOLOGY_PATH.read_text(encoding="utf-8"))
     owners: dict[str, list[str]] = defaultdict(list)
@@ -104,10 +96,6 @@ def test_every_variant_maps_to_exactly_one_canonical():
     assert ambiguous == {}
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: the normalizer has no startup validation of the ontology",
-    strict=True,
-)
 def test_duplicate_variant_in_ontology_raises_on_load(tmp_path):
     bad = tmp_path / "bad_ontology.json"
     bad.write_text(
@@ -130,35 +118,19 @@ def test_canonical_is_always_one_of_its_own_variants():
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: substring fuzzy match maps 'scikit learn' to jenkins via the 'ci' variant",
-    strict=True,
-)
 def test_scikit_learn_is_not_mangled_by_substring_match(normalizer):
     assert normalizer.normalize_skill("scikit-learn") == "scikit-learn"
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: substring fuzzy match maps 'react js' to javascript via the 'js' variant",
-    strict=True,
-)
 def test_react_dot_js_normalizes_to_react(normalizer):
     assert normalizer.normalize_skill("react.js") == "react"
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: single letters substring-match arbitrary variants",
-    strict=True,
-)
 @pytest.mark.parametrize("token", ["r", "c"])
 def test_single_letter_tokens_are_not_normalized(normalizer, token):
     assert normalizer.normalize_skill(token) == token
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: the _fuzzy_match elif chain duplicating the ontology should be deleted",
-    strict=True,
-)
 def test_fuzzy_match_helper_is_gone(normalizer):
     assert not hasattr(normalizer, "_fuzzy_match")
 
@@ -168,13 +140,92 @@ def test_fuzzy_match_helper_is_gone(normalizer):
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 2: ambiguous generic variants should be removed from the ontology",
-    strict=True,
-)
 @pytest.mark.parametrize(
     "token",
     ["password hashing", "cache", "design", "requirements", "api", "ai"],
 )
 def test_ambiguous_generic_tokens_are_not_normalized(normalizer, token):
     assert normalizer.normalize_skill(token) == token
+
+
+# --------------------------------------------------------------------------
+# Ontology load-time validation
+# --------------------------------------------------------------------------
+
+
+def test_duplicate_canonical_key_raises_on_load(tmp_path):
+    """json.loads keeps the last duplicate, which is how 'elastic' was lost."""
+    bad = tmp_path / "dupe_key.json"
+    bad.write_text(
+        '{"elasticsearch": ["elasticsearch", "elastic"], "redis": ["redis"], '
+        '"elasticsearch": ["elasticsearch", "es"]}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="duplicate canonical keys"):
+        SkillNormalizer(ontology_path=str(bad))
+
+
+def test_non_list_variants_raise_on_load(tmp_path):
+    bad = tmp_path / "bad_shape.json"
+    bad.write_text('{"python": "python"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a list"):
+        SkillNormalizer(ontology_path=str(bad))
+
+
+def test_a_clean_ontology_loads(tmp_path):
+    good = tmp_path / "ok.json"
+    good.write_text('{"python": ["python", "py"], "go": ["go", "golang"]}', encoding="utf-8")
+    normalizer = SkillNormalizer(ontology_path=str(good))
+    assert normalizer.normalize_skill("py") == "python"
+
+
+def test_real_ontology_loads_without_error():
+    """The shipped ontology must satisfy its own validation."""
+    assert SkillNormalizer().get_all_canonical_skills()
+
+
+# --------------------------------------------------------------------------
+# Coverage of mainstream skills
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("PostgreSQL", "postgresql"),
+        ("Postgres", "postgresql"),
+        ("FastAPI", "fastapi"),
+        ("Django", "django"),
+        ("pytest", "pytest"),
+        ("Vite", "vite"),
+        ("webpack", "webpack"),
+        ("Storybook", "storybook"),
+        ("TailwindCSS", "tailwind"),
+        ("Node", "node.js"),
+        ("Azure", "azure"),
+        ("GitHub Actions", "github actions"),
+    ],
+)
+def test_mainstream_skills_are_covered(normalizer, raw, expected):
+    assert normalizer.normalize_skill(raw) == expected
+
+
+def test_specific_databases_are_not_folded_into_generic_sql(normalizer):
+    """Postgres and PostgreSQL previously normalized differently from each other."""
+    assert normalizer.normalize_skill("postgres") == normalizer.normalize_skill("postgresql")
+    assert normalizer.normalize_skill("mysql") != "sql"
+    assert normalizer.normalize_skill("sql") == "sql"
+
+
+def test_hyphen_and_punctuation_bearing_names_survive_cleaning(normalizer):
+    for raw, expected in [("C++", "c++"), ("C#", "c#"), ("socket.io", "socket.io")]:
+        assert normalizer.normalize_skill(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "generic",
+    ["deployment", "dashboard", "authentication", "container", "crm", "paas", "ci"],
+)
+def test_generic_category_words_do_not_resolve_to_one_product(normalizer, generic):
+    """'deployment' is not vercel and 'authentication' is not oauth."""
+    assert normalizer.normalize_skill(generic) == generic
