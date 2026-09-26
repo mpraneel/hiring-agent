@@ -19,7 +19,7 @@ def scorer() -> BaselineScorer:
 def make_pair(resume_skills, must, nice):
     return (
         ParsedResume(skills_norm=list(resume_skills)),
-        ParsedJD(must_haves_raw=list(must), nice_to_haves_raw=list(nice)),
+        ParsedJD(must_have_skills=list(must), nice_to_have_skills=list(nice)),
     )
 
 

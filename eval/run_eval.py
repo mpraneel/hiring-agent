@@ -201,8 +201,8 @@ class Extractor:
     def _extract_deterministic(self, case: Case) -> dict[str, set[str]]:
         jd = self.jd_parser.parse_jd(case.jd_text)
         resume = self.resume_parser.parse_text(case.resume_text)
-        must = {s.strip().lower() for s in jd.must_haves_raw if s.strip()}
-        nice = {s.strip().lower() for s in jd.nice_to_haves_raw if s.strip()}
+        must = {s.strip().lower() for s in jd.must_have_skills if s.strip()}
+        nice = {s.strip().lower() for s in jd.nice_to_have_skills if s.strip()}
         return {
             "jd_must_have": must,
             "jd_nice_to_have": nice - must,

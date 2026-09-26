@@ -73,8 +73,8 @@ You are an expert recruiter analyzing a candidate's fit for a job position. Base
 
 JOB DESCRIPTION:
 Title: {jd.title or 'Not specified'}
-Must-have skills: {', '.join(jd.must_haves_raw) if jd.must_haves_raw else 'None specified'}
-Nice-to-have skills: {', '.join(jd.nice_to_haves_raw) if jd.nice_to_haves_raw else 'None specified'}
+Must-have skills: {', '.join(jd.must_have_skills) if jd.must_have_skills else 'None specified'}
+Nice-to-have skills: {', '.join(jd.nice_to_have_skills) if jd.nice_to_have_skills else 'None specified'}
 
 CANDIDATE PROFILE:
 Name: {resume.name or 'Not specified'}
@@ -101,8 +101,8 @@ You are an expert resume writer helping a candidate improve their resume for a s
 
 JOB DESCRIPTION:
 Title: {jd.title or 'Not specified'}
-Must-have skills: {', '.join(jd.must_haves_raw) if jd.must_haves_raw else 'None specified'}
-Nice-to-have skills: {', '.join(jd.nice_to_haves_raw) if jd.nice_to_haves_raw else 'None specified'}
+Must-have skills: {', '.join(jd.must_have_skills) if jd.must_have_skills else 'None specified'}
+Nice-to-have skills: {', '.join(jd.nice_to_have_skills) if jd.nice_to_have_skills else 'None specified'}
 
 CANDIDATE PROFILE:
 Skills: {', '.join(resume.skills_norm) if resume.skills_norm else 'None detected'}

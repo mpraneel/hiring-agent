@@ -101,10 +101,10 @@ class MatchAggregator:
             },
             'jd_info': {
                 'title': jd.title,
-                'must_have_skills_count': len(jd.must_haves_raw),
-                'nice_to_have_skills_count': len(jd.nice_to_haves_raw),
-                'must_have_skills': jd.must_haves_raw,
-                'nice_to_have_skills': jd.nice_to_haves_raw
+                'must_have_skills_count': len(jd.must_have_skills),
+                'nice_to_have_skills_count': len(jd.nice_to_have_skills),
+                'must_have_skills': jd.must_have_skills,
+                'nice_to_have_skills': jd.nice_to_have_skills
             },
             'baseline_analysis': baseline_breakdown,
             'skill_gaps': skill_gaps,
@@ -155,7 +155,7 @@ class MatchAggregator:
             'matched_skills_count': len(match_result.matched_skills),
             'missing_skills_count': len(match_result.missing_skills),
             'nice_matches_count': len(match_result.nice_matches),
-            'has_critical_gaps': len([s for s in match_result.missing_skills if s in jd.must_haves_raw]) > 0,
+            'has_critical_gaps': len([s for s in match_result.missing_skills if s in jd.must_have_skills]) > 0,
             'llm_available': match_result.llm_rationale is not None and match_result.llm_rationale != "LLM analysis unavailable"
         }
     
