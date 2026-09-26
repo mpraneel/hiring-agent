@@ -1,0 +1,36 @@
+# Version control and CI
+.git
+.github
+.gitignore
+
+# Secrets. The image never bakes in a key; .env is supplied at run time.
+.env
+.env.*
+!.env.example
+
+# Virtualenvs and caches
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# Node
+node_modules
+ui/node_modules
+frontend/node_modules
+frontend/dist
+
+# Tests and evaluation are not needed in a runtime image
+tests
+eval
+test_basic.py
+start.py
+
+# Docs
+*.md
+!README.md
