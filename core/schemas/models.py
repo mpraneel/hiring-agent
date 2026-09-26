@@ -1,8 +1,12 @@
 """Pydantic models for parsed documents and match results."""
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
+
+# Which code path produced an extraction. "fallback" means the LLM was tried
+# and failed, which is worth distinguishing from never having tried it.
+ExtractionPath = Literal["llm", "deterministic", "fallback", "hybrid"]
 
 
 class CandidateExperience(BaseModel):
@@ -31,6 +35,7 @@ class ParsedResume(BaseModel):
     skills_norm: List[str] = Field(default_factory=list)
     education: List[str] = Field(default_factory=list)
     experiences: List[CandidateExperience] = Field(default_factory=list)
+    extraction_path: ExtractionPath = "deterministic"
 
 
 class ParsedJD(BaseModel):
@@ -49,6 +54,7 @@ class ParsedJD(BaseModel):
     must_have_skills: List[str] = Field(default_factory=list)
     nice_to_have_skills: List[str] = Field(default_factory=list)
     skills_norm: List[str] = Field(default_factory=list)
+    extraction_path: ExtractionPath = "deterministic"
 
 
 class MatchResult(BaseModel):
