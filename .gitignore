@@ -1,0 +1,59 @@
+# Environment variables (never commit real keys)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+sdist/
+*.manifest
+
+# Virtualenvs
+.venv/
+venv/
+env/
+ENV/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+
+# Type checker and linter caches
+.mypy_cache/
+.ruff_cache/
+.eslintcache
+*.tsbuildinfo
+
+# Node / frontend
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs and scratch
+*.log
+tmp/
+temp/
+
+# Local sample uploads used while testing by hand
+scratch/
