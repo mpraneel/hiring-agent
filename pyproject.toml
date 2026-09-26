@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# An xfail that starts passing is a failure. The Phase 2 fixes are expected to
+# force the matching markers to be removed rather than silently pass.
+xfail_strict = true
+asyncio_mode = "strict"
