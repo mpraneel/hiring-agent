@@ -1,6 +1,6 @@
 {
   "mode": "deterministic",
-  "generated_at": "2026-09-26T23:09:46+00:00",
+  "generated_at": "2026-09-26T23:41:42+00:00",
   "cases_discovered": 2,
   "cases_labeled": 0,
   "per_field": {
@@ -48,23 +48,37 @@
       "labeled": false,
       "predicted": {
         "jd_must_have": [
-          "business analyst",
-          "caching",
           "docker",
+          "fastapi",
+          "postgresql",
+          "python",
+          "rest",
+          "starlette",
+          "testing"
+        ],
+        "jd_nice_to_have": [
+          "caching",
           "go",
-          "jenkins",
           "kafka",
           "kubernetes",
-          "python",
           "rate limiting",
           "redis",
-          "rest",
-          "terraform",
-          "testing",
-          "vercel"
+          "terraform"
         ],
-        "jd_nice_to_have": [],
-        "resume_skills": []
+        "resume_skills": [
+          "django",
+          "docker",
+          "fastapi",
+          "github actions",
+          "grafana",
+          "kubernetes",
+          "postgresql",
+          "pytest",
+          "python",
+          "redis",
+          "rest",
+          "terraform"
+        ]
       },
       "counts": {},
       "classification": {
@@ -78,16 +92,34 @@
       "predicted": {
         "jd_must_have": [
           "accessibility",
-          "css",
-          "figma",
           "javascript",
           "react",
           "testing",
-          "typescript"
+          "typescript",
+          "vite",
+          "webpack"
         ],
-        "jd_nice_to_have": [],
+        "jd_nice_to_have": [
+          "css",
+          "figma",
+          "node.js",
+          "storybook",
+          "tailwind"
+        ],
         "resume_skills": [
-          "sed"
+          "accessibility",
+          "css",
+          "figma",
+          "git",
+          "html",
+          "javascript",
+          "jest",
+          "react",
+          "storybook",
+          "tailwind",
+          "testing library",
+          "typescript",
+          "vite"
         ]
       },
       "counts": {},
