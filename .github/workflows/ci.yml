@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Cancel superseded runs on the same ref rather than paying for both.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests and eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        # No API key is configured, which is deliberate. The suite must pass with
+        # the LLM unavailable and must never reach the network.
+        run: pytest -q
+
+      - name: Check the app imports and serves
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from api.main import app
+
+          response = TestClient(app).get("/health")
+          assert response.status_code == 200, response.status_code
+          print("health:", response.json())
+          PY
+
+      - name: Run deterministic eval
+        # Deterministic mode needs no API key. The F1 gate activates once the
+        # EVAL_MIN_F1 repository variable is set, which is possible only after
+        # the eval cases have been labeled by hand. Until then the step still
+        # runs, so a change that breaks the harness itself fails here.
+        env:
+          EVAL_MIN_F1: ${{ vars.EVAL_MIN_F1 }}
+        run: |
+          if [ -n "${EVAL_MIN_F1}" ]; then
+            echo "Gating on micro F1 >= ${EVAL_MIN_F1}"
+            python eval/run_eval.py --mode deterministic --min-f1 "${EVAL_MIN_F1}"
+          else
+            python eval/run_eval.py --mode deterministic
+            echo "::notice title=F1 gate inactive::Set the EVAL_MIN_F1 repository variable to the value recorded in eval/results/deterministic.json to fail the build on extraction regressions."
+          fi
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval/results/
+          if-no-files-found: ignore
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t hiring-agent:ci .
+
+      - name: Start container and check health
+        run: |
+          docker run -d --name hiring-agent-ci -p 8000:8000 \
+            -e LLM_PROVIDER=openai -e LLM_API_KEY= hiring-agent:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health > /dev/null; then
+              echo "healthy after ${attempt}s"
+              curl -sS http://127.0.0.1:8000/health
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "container did not become healthy" >&2
+          docker logs hiring-agent-ci >&2
+          exit 1
+
+      - name: Confirm the container does not run as root
+        run: |
+          uid=$(docker exec hiring-agent-ci id -u)
+          echo "container uid: ${uid}"
+          test "${uid}" != "0"
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f hiring-agent-ci || true
