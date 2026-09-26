@@ -1,24 +1,32 @@
-import os
+import logging
 from typing import Optional
+
+from .. import config
 from ..schemas.models import ParsedResume, ParsedJD, MatchResult
 from .baseline_scorer import BaselineScorer
 from .llm_overlay import LLMOverlay
 
+logger = logging.getLogger(__name__)
+
 
 class MatchAggregator:
-    def __init__(self, llm_provider: str = "openai", enable_llm: bool = True):
+    def __init__(
+        self,
+        llm_provider: Optional[str] = None,
+        enable_llm: bool = True,
+        llm_model: Optional[str] = None,
+    ):
         """Initialize the match aggregator."""
         self.baseline_scorer = BaselineScorer()
-        self.enable_llm = enable_llm and os.getenv("LLM_API_KEY") is not None
-        
+        self.llm_overlay: Optional[LLMOverlay] = None
+        self.enable_llm = enable_llm and config.llm_enabled()
+
         if self.enable_llm:
             try:
-                self.llm_overlay = LLMOverlay(provider=llm_provider)
-            except Exception as e:
-                print(f"Warning: LLM overlay disabled due to error: {e}")
+                self.llm_overlay = LLMOverlay(provider=llm_provider, model=llm_model)
+            except Exception as exc:
+                logger.warning("LLM overlay disabled: %s", exc)
                 self.enable_llm = False
-        else:
-            self.llm_overlay = None
     
     def match_resume_to_jd(self, resume: ParsedResume, jd: ParsedJD) -> MatchResult:
         """
@@ -58,7 +66,7 @@ class MatchAggregator:
                 
             except Exception as e:
                 # If LLM fails, continue without it
-                print(f"Warning: LLM overlay failed: {e}")
+                logger.warning("LLM overlay failed: %s", e)
                 match_result.llm_rationale = "LLM analysis unavailable"
                 match_result.suggestions = []
         

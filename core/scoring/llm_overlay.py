@@ -1,42 +1,43 @@
-import os
-import json
-from typing import Optional, List
+from typing import List, Optional
+
+from .. import config
 from ..schemas.models import ParsedResume, ParsedJD, MatchResult
 
 
 class LLMOverlay:
-    def __init__(self, provider: str = "openai"):
-        """Initialize the LLM overlay with specified provider."""
-        self.provider = provider.lower()
-        self.api_key = os.getenv("LLM_API_KEY")
-        
+    def __init__(self, provider: Optional[str] = None, model: Optional[str] = None):
+        """Initialize the LLM overlay with the given or configured provider."""
+        resolved = (provider or config.get_provider()).lower()
+        if resolved not in config.SUPPORTED_PROVIDERS:
+            raise ValueError(f"Unsupported LLM provider: {provider}")
+        self.provider = resolved
+
+        self.api_key = config.get_api_key()
         if not self.api_key:
             raise ValueError("LLM_API_KEY environment variable is required")
-        
-        # Initialize the appropriate client
+
+        self.model_name = model or config.get_model(self.provider)
+
         if self.provider == "openai":
             self._init_openai()
-        elif self.provider == "gemini":
-            self._init_gemini()
         else:
-            raise ValueError(f"Unsupported LLM provider: {provider}")
-    
-    def _init_openai(self):
-        """Initialize OpenAI client."""
+            self._init_gemini()
+
+    def _init_openai(self) -> None:
+        """Initialize the OpenAI client."""
         try:
             import openai
-            self.client = openai.OpenAI(api_key=self.api_key)
         except ImportError:
             raise ImportError("OpenAI package not installed. Run: pip install openai")
-    
-    def _init_gemini(self):
-        """Initialize Gemini client."""
+        self.client = openai.OpenAI(api_key=self.api_key)
+
+    def _init_gemini(self) -> None:
+        """Initialize the Gemini client."""
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
+            from google import genai
         except ImportError:
-            raise ImportError("Google Generative AI package not installed. Run: pip install google-generativeai")
+            raise ImportError("Google GenAI package not installed. Run: pip install google-genai")
+        self.client = genai.Client(api_key=self.api_key)
     
     def generate_rationale(self, resume: ParsedResume, jd: ParsedJD, match_result: MatchResult) -> str:
         """Generate rationale explaining the match score and gaps."""
@@ -122,7 +123,7 @@ Keep suggestions concise and practical.
     def _call_openai(self, prompt: str) -> str:
         """Call OpenAI API."""
         response = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=self.model_name,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that provides professional, objective analysis and suggestions."},
                 {"role": "user", "content": prompt}
@@ -133,9 +134,12 @@ Keep suggestions concise and practical.
         return response.choices[0].message.content.strip()
     
     def _call_gemini(self, prompt: str) -> str:
-        """Call Gemini API."""
-        response = self.model.generate_content(prompt)
-        return response.text.strip()
+        """Call the Gemini API."""
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+        )
+        return (response.text or "").strip()
     
     def _parse_suggestions(self, response: str) -> List[str]:
         """Parse suggestions from LLM response."""
@@ -166,21 +170,19 @@ Keep suggestions concise and practical.
         return suggestions[:3]  # Limit to 3 suggestions
     
     def is_available(self) -> bool:
-        """Check if LLM service is available."""
+        """Check whether the configured LLM service answers a trivial prompt."""
         try:
             if self.provider == "openai":
-                # Test with a simple prompt
-                test_response = self.client.chat.completions.create(
-                    model="gpt-3.5-turbo",
+                self.client.chat.completions.create(
+                    model=self.model_name,
                     messages=[{"role": "user", "content": "Hello"}],
-                    max_tokens=5
+                    max_tokens=5,
                 )
-                return True
-            elif self.provider == "gemini":
-                # Test with a simple prompt
-                test_response = self.model.generate_content("Hello")
-                return True
+            else:
+                self.client.models.generate_content(
+                    model=self.model_name,
+                    contents="Hello",
+                )
+            return True
         except Exception:
             return False
-        
-        return False

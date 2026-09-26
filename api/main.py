@@ -7,6 +7,7 @@ import uuid
 import logging
 from typing import Optional
 
+from core import config
 from core.parsers.resume_parser import ResumeParser
 from core.parsers.jd_parser import JDParser
 from core.scoring.aggregate import MatchAggregator
@@ -36,12 +37,11 @@ app.add_middleware(
 resume_parser = ResumeParser()
 jd_parser = JDParser()
 
-# Get LLM provider from environment
-llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
-if llm_provider not in ["openai", "gemini"]:
-    llm_provider = "openai"
+# Resolve LLM settings from the environment
+llm_provider = config.get_provider()
+llm_model = config.get_model(llm_provider)
 
-match_aggregator = MatchAggregator(llm_provider=llm_provider)
+match_aggregator = MatchAggregator(llm_provider=llm_provider, llm_model=llm_model)
 
 
 @app.get("/")
@@ -52,7 +52,8 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "llm_provider": llm_provider,
-        "llm_enabled": os.getenv("LLM_API_KEY") is not None
+        "llm_model": llm_model,
+        "llm_enabled": config.llm_enabled()
     }
 
 
@@ -61,7 +62,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "llm_available": os.getenv("LLM_API_KEY") is not None
+        "llm_available": config.llm_enabled()
     }
 
 
