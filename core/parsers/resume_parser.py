@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 import pypdf
 
+from ..extraction.spans import normalize_source, spans_for_skills
 from ..normalize.normalizer import SkillNormalizer
 from ..schemas.models import CandidateExperience, ParsedResume
 
@@ -156,7 +157,8 @@ class ResumeParser:
         return "\n".join(chunks)
 
     def _parse_text(self, text: str) -> ParsedResume:
-        lines = [line.strip() for line in (text or "").replace("\r", "\n").split("\n")]
+        source = normalize_source(text or "")
+        lines = source.split("\n")
         non_empty = [line for line in lines if line]
 
         parsed = ParsedResume()
@@ -179,6 +181,10 @@ class ResumeParser:
         if experience_lines:
             parsed.experiences = self._extract_experiences(experience_lines)
 
+        parsed.source_text = source
+        parsed.spans = spans_for_skills(
+            source, [(skill, None) for skill in parsed.skills_norm], self.normalizer
+        )
         return parsed
 
     # -- sections ---------------------------------------------------------

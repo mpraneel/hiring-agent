@@ -36,6 +36,7 @@ from .models import (
     ResumeExtraction,
 )
 from .provider import StructuredProvider, StructuredProviderError, build_provider
+from .spans import normalize_source, spans_for_skills, spans_from_evidence
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class LLMExtractor:
             parsed.extraction_path = "fallback"
             return parsed
 
-        llm_parsed = self._jd_from_extraction(extraction)
+        llm_parsed = self._jd_from_extraction(extraction, jd_text)
         if mode == "llm":
             llm_parsed.extraction_path = "llm"
             return llm_parsed
@@ -181,20 +182,41 @@ class LLMExtractor:
                 skills_norm=self.normalizer.normalize_skills(llm_skills),
                 education=deterministic.education,
                 experiences=deterministic.experiences,
+                source_text=deterministic.source_text,
+                spans=spans_from_evidence(
+                    deterministic.source_text,
+                    [(item.skill, None, item.evidence) for item in extraction.skills],
+                ),
             )
             parsed.extraction_path = "llm"
             return parsed
 
+        merged_skills = self.normalizer.normalize_skills(
+            llm_skills + deterministic.skills_norm
+        )
+        # Prefer the LLM's own evidence where it has some, and fall back to
+        # locating the surface form for skills only the regex path found.
+        llm_spans = spans_from_evidence(
+            deterministic.source_text,
+            [(item.skill, None, item.evidence) for item in extraction.skills],
+        )
+        covered = {span.skill for span in llm_spans if span.start is not None}
+        remaining = [s for s in merged_skills if s not in covered]
         merged = ParsedResume(
             name=deterministic.name,
             email=deterministic.email,
             phone=deterministic.phone,
             skills_raw=deterministic.skills_raw,
-            skills_norm=self.normalizer.normalize_skills(
-                llm_skills + deterministic.skills_norm
-            ),
+            skills_norm=merged_skills,
             education=deterministic.education,
             experiences=deterministic.experiences,
+            source_text=deterministic.source_text,
+            spans=[s for s in llm_spans if s.start is not None]
+            + spans_for_skills(
+                deterministic.source_text,
+                [(skill, None) for skill in remaining],
+                self.normalizer,
+            ),
         )
         merged.extraction_path = "hybrid"
         return merged
@@ -290,15 +312,25 @@ class LLMExtractor:
 
     # -- assembly ---------------------------------------------------------
 
-    def _jd_from_extraction(self, extraction: JDExtraction) -> ParsedJD:
+    def _jd_from_extraction(self, extraction: JDExtraction, source: str) -> ParsedJD:
         must = [r.skill for r in extraction.requirements if r.priority == "must"]
         nice = [r.skill for r in extraction.requirements if r.priority == "nice"]
         nice = [s for s in nice if s not in must]
+        normalized = normalize_source(source)
         return ParsedJD(
             title=extraction.title,
             must_have_skills=must,
             nice_to_have_skills=nice,
             skills_norm=self.normalizer.normalize_skills(must + nice),
+            source_text=normalized,
+            spans=spans_from_evidence(
+                normalized,
+                [
+                    (r.skill, r.priority, r.evidence)
+                    for r in extraction.requirements
+                    if r.skill in must or r.skill in nice
+                ],
+            ),
         )
 
     def _merge_jd(self, primary: ParsedJD, secondary: ParsedJD) -> ParsedJD:
@@ -316,9 +348,29 @@ class LLMExtractor:
                 nice.append(skill)
         nice = [s for s in nice if s not in must]
 
+        priorities = {skill: "must" for skill in must}
+        priorities.update({skill: "nice" for skill in nice})
+
+        # Keep the primary's located spans, then locate anything only the
+        # secondary found, so every chip can be traced back to the document.
+        spans = [
+            span.model_copy(update={"priority": priorities.get(span.skill, span.priority)})
+            for span in primary.spans
+            if span.start is not None and span.skill in priorities
+        ]
+        covered = {span.skill for span in spans}
+        source = primary.source_text or secondary.source_text
+        spans += spans_for_skills(
+            source,
+            [(skill, priorities[skill]) for skill in priorities if skill not in covered],
+            self.normalizer,
+        )
+
         return ParsedJD(
             title=primary.title or secondary.title,
             must_have_skills=must,
             nice_to_have_skills=nice,
             skills_norm=self.normalizer.normalize_skills(must + nice),
+            source_text=source,
+            spans=spans,
         )

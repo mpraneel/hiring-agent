@@ -19,8 +19,9 @@ preferred qualification was silently promoted to a hard requirement.
 import re
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
+from ..extraction.spans import locate_token
 from ..normalize.normalizer import SkillNormalizer
-from ..schemas.models import ParsedJD
+from ..schemas.models import ParsedJD, SkillSpan
 
 # Headings that set the priority for the lines beneath them.
 MUST_HEADINGS: frozenset[str] = frozenset(
@@ -175,10 +176,15 @@ class JDParser:
         parsed_jd = ParsedJD()
         parsed_jd.title = self._extract_job_title(lines)
 
-        must, nice = self._extract_requirements(lines)
+        must, nice, spans = self._extract_requirements(lines)
         parsed_jd.must_have_skills = must
         parsed_jd.nice_to_have_skills = nice
         parsed_jd.skills_norm = self.normalizer.normalize_skills(must + nice)
+
+        # Offsets are reported against exactly the text the API returns, so the
+        # UI can highlight evidence without searching for it.
+        parsed_jd.source_text = cleaned
+        parsed_jd.spans = spans
         return parsed_jd
 
     # -- cleaning ---------------------------------------------------------
@@ -238,18 +244,33 @@ class JDParser:
 
     # -- requirements -----------------------------------------------------
 
-    def _extract_requirements(self, lines: List[str]) -> Tuple[List[str], List[str]]:
-        """Split requirements into must-have and nice-to-have canonical skills."""
+    def _extract_requirements(
+        self, lines: List[str]
+    ) -> Tuple[List[str], List[str], List[SkillSpan]]:
+        """Split requirements into must-have and nice-to-have canonical skills.
+
+        Evidence spans are recorded here rather than by searching the finished
+        document, because only this loop knows which line a skill was actually
+        matched on. Searching afterwards pointed "rest" at the phrase "the rest
+        of the team" in the company blurb instead of at the REST API requirement
+        it was really extracted from.
+        """
         must: List[str] = []
         nice: List[str] = []
+        located: Dict[str, Tuple[int, int, str]] = {}
         section: Optional[str] = None
+        offset = 0
 
         for line in lines:
+            line_start = offset
+            offset += len(line) + 1  # the newline that join() puts back
+
             if not line:
                 continue
 
             is_bullet = line.startswith("- ")
-            body = line[2:].strip() if is_bullet else line
+            body_offset = 2 if is_bullet else 0
+            body = line[body_offset:].strip() if is_bullet else line
             if not body:
                 continue
 
@@ -264,17 +285,40 @@ class JDParser:
                 continue
 
             in_requirements = section in ("must", "nice")
-            for skill in self._extract_skills_from_line(
+            for skill, surface in self._extract_skills_from_line(
                 body, bullet_in_requirements=is_bullet and in_requirements
             ):
                 target = must if priority == "must" else nice
                 if skill not in target:
                     target.append(skill)
+                if skill not in located:
+                    found = locate_token(body, surface)
+                    if found is not None:
+                        start = line_start + body_offset + found[0]
+                        end = line_start + body_offset + found[1]
+                        located[skill] = (start, end, line[body_offset:].strip())
 
         # A skill named in both sections is a hard requirement. Counting it in
         # both would also double its weight in the score.
         nice = [skill for skill in nice if skill not in must]
-        return must, nice
+
+        spans: List[SkillSpan] = []
+        for skill in must + nice:
+            priority = "must" if skill in must else "nice"
+            if skill in located:
+                start, end, evidence = located[skill]
+                spans.append(
+                    SkillSpan(
+                        skill=skill,
+                        priority=priority,
+                        evidence=evidence,
+                        start=start,
+                        end=end,
+                    )
+                )
+            else:
+                spans.append(SkillSpan(skill=skill, priority=priority))
+        return must, nice, spans
 
     def _line_priority(self, line: str, section: Optional[str]) -> Optional[str]:
         """Decide whether a line describes a must-have or a nice-to-have."""
@@ -326,25 +370,29 @@ class JDParser:
 
     def _extract_skills_from_line(
         self, line: str, bullet_in_requirements: bool = False
-    ) -> List[str]:
-        """Find canonical skills mentioned in a single line."""
+    ) -> List[Tuple[str, str]]:
+        """Find canonical skills in a line, with the surface form that matched.
+
+        The surface form is returned so the caller can record where on the line
+        the evidence actually sits.
+        """
         lowered = line.lower()
-        words = re.findall(r"[a-z0-9+#.\-]+", lowered)
-        word_set = set(words)
+        word_set = set(re.findall(r"[a-z0-9+#.\-]+", lowered))
         list_context = bullet_in_requirements or self._is_list_context(line)
 
-        found: List[str] = []
+        best: Dict[str, str] = {}
         for surface, canonical in self._match_index.items():
-            if canonical in found:
-                continue
             if not self._surface_present(surface, lowered):
                 continue
             if self.normalizer.is_ambiguous(surface) and not self._ambiguous_token_confirmed(
                 surface, word_set, list_context
             ):
                 continue
-            found.append(canonical)
-        return found
+            # Prefer the longest matching surface form: it is the more specific
+            # evidence, so "react native" beats "react".
+            if canonical not in best or len(surface) > len(best[canonical]):
+                best[canonical] = surface
+        return list(best.items())
 
     @staticmethod
     def _surface_present(surface: str, lowered_line: str) -> bool:

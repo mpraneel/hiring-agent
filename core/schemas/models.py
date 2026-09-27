@@ -12,6 +12,25 @@ ExtractionPath = Literal["llm", "deterministic", "fallback", "hybrid"]
 # "unavailable" means it was tried and failed. The score is unaffected either way.
 LLMStatus = Literal["ok", "unavailable", "disabled"]
 
+Priority = Literal["must", "nice"]
+
+
+class SkillSpan(BaseModel):
+    """One extracted skill together with where it was evidenced.
+
+    ``start`` and ``end`` are character offsets into the ``source_text`` of the
+    document this came from, computed on the backend so the UI never has to
+    search for a span. They are None when the skill was extracted but its
+    evidence could not be located, which keeps the chip list consistent with the
+    score instead of silently dropping the skill.
+    """
+
+    skill: str
+    priority: Optional[Priority] = None
+    evidence: str = ""
+    start: Optional[int] = None
+    end: Optional[int] = None
+
 
 class CandidateExperience(BaseModel):
     """One role from a resume's experience section."""
@@ -40,6 +59,8 @@ class ParsedResume(BaseModel):
     education: List[str] = Field(default_factory=list)
     experiences: List[CandidateExperience] = Field(default_factory=list)
     extraction_path: ExtractionPath = "deterministic"
+    source_text: str = ""
+    spans: List[SkillSpan] = Field(default_factory=list)
 
 
 class ParsedJD(BaseModel):
@@ -59,6 +80,8 @@ class ParsedJD(BaseModel):
     nice_to_have_skills: List[str] = Field(default_factory=list)
     skills_norm: List[str] = Field(default_factory=list)
     extraction_path: ExtractionPath = "deterministic"
+    source_text: str = ""
+    spans: List[SkillSpan] = Field(default_factory=list)
 
 
 class MatchResult(BaseModel):
