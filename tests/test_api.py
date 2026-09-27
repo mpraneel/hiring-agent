@@ -350,7 +350,6 @@ def test_resume_text_is_accepted_instead_of_a_pdf(client, sample_resume_text, sa
     assert response.status_code == 200
 
 
-@pytest.mark.xfail(reason="Phase 6: examples endpoint does not exist yet", strict=True)
 def test_examples_endpoint_returns_sample_pairs(client):
     response = client.get("/api/v1/examples")
     assert response.status_code == 200
@@ -359,3 +358,117 @@ def test_examples_endpoint_returns_sample_pairs(client):
     for example in examples:
         assert example["resume_text"].strip()
         assert example["job_description"].strip()
+
+
+# --------------------------------------------------------------------------
+# Evidence spans in the response
+# --------------------------------------------------------------------------
+
+
+def test_match_response_carries_documents(client, resume_upload, sample_jd):
+    body = client.post(
+        "/api/v1/match",
+        files={"resume_pdf": resume_upload},
+        data={"job_description": sample_jd},
+    ).json()
+
+    documents = body["documents"]
+    assert documents["jd"]["source_text"].strip()
+    assert documents["resume"]["source_text"].strip()
+    assert documents["jd"]["requirements"]
+    assert documents["resume"]["skills"]
+
+
+def test_evidence_offsets_slice_to_the_skill(client, sample_jd, sample_resume_text):
+    """The UI slices source_text with these offsets, so they must be exact."""
+    body = client.post(
+        "/api/v1/match",
+        data={"resume_text": sample_resume_text, "job_description": sample_jd},
+    ).json()
+
+    for document_key, items_key in (("jd", "requirements"), ("resume", "skills")):
+        source = body["documents"][document_key]["source_text"]
+        for item in body["documents"][document_key][items_key]:
+            if item["start"] is None:
+                continue
+            sliced = source[item["start"] : item["end"]]
+            assert sliced, f"empty slice for {item['skill']}"
+            # The slice must be a surface form of the skill, not arbitrary text.
+            assert sliced.lower().replace(" ", "") != "", sliced
+            assert item["evidence"], f"no evidence line for {item['skill']}"
+
+
+def test_evidence_line_contains_the_highlighted_span(client, sample_jd, sample_resume_text):
+    body = client.post(
+        "/api/v1/match",
+        data={"resume_text": sample_resume_text, "job_description": sample_jd},
+    ).json()
+    source = body["documents"]["jd"]["source_text"]
+    for item in body["documents"]["jd"]["requirements"]:
+        if item["start"] is None:
+            continue
+        assert source[item["start"] : item["end"]].lower() in item["evidence"].lower()
+
+
+def test_breakdown_counts_are_present(client, sample_jd, sample_resume_text):
+    breakdown = client.post(
+        "/api/v1/match",
+        data={"resume_text": sample_resume_text, "job_description": sample_jd},
+    ).json()["breakdown"]
+    assert breakdown["must_total"] >= len(breakdown["must_matched"])
+    assert breakdown["nice_total"] >= len(breakdown["nice_matched"])
+    assert set(breakdown["must_matched"]) & set(breakdown["must_missing"]) == set()
+
+
+def test_every_requirement_priority_is_must_or_nice(client, sample_jd, sample_resume_text):
+    body = client.post(
+        "/api/v1/match",
+        data={"resume_text": sample_resume_text, "job_description": sample_jd},
+    ).json()
+    for item in body["documents"]["jd"]["requirements"]:
+        assert item["priority"] in ("must", "nice")
+
+
+# --------------------------------------------------------------------------
+# Examples endpoint
+# --------------------------------------------------------------------------
+
+
+def test_examples_returns_usable_pairs(client):
+    examples = client.get("/api/v1/examples").json()["examples"]
+    assert len(examples) >= 2
+    for example in examples:
+        assert example["id"]
+        assert example["label"]
+        assert example["job_description"].strip()
+        assert example["resume_text"].strip()
+
+
+def test_examples_contain_no_real_contact_details(client):
+    """These are served publicly, so they must stay obviously synthetic."""
+    for example in client.get("/api/v1/examples").json()["examples"]:
+        combined = example["resume_text"] + example["job_description"]
+        assert "@example.com" in example["resume_text"]
+        assert "gmail.com" not in combined
+        assert "outlook.com" not in combined
+
+
+def test_an_example_scores_end_to_end(client):
+    example = client.get("/api/v1/examples").json()["examples"][0]
+    response = client.post(
+        "/api/v1/match",
+        data={
+            "resume_text": example["resume_text"],
+            "job_description": example["job_description"],
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["match_score"] > 0
+    assert body["documents"]["jd"]["requirements"]
+
+
+def test_api_routes_are_not_shadowed_by_the_static_mount(client):
+    """The catch-all must never swallow an API path."""
+    assert client.get("/api/v1/examples").status_code == 200
+    assert client.get("/health").status_code == 200

@@ -1,0 +1,18 @@
+{
+  "examples": [
+    {
+      "id": "backend_python",
+      "label": "Backend engineer, strong match",
+      "description": "A Python and PostgreSQL backend role against a closely matching resume.",
+      "jd_file": "case_001_backend_python.jd.txt",
+      "resume_file": "case_001_backend_python.resume.txt"
+    },
+    {
+      "id": "frontend_react",
+      "label": "Frontend engineer, partial match",
+      "description": "A React and TypeScript design systems role against a resume missing some nice-to-haves.",
+      "jd_file": "case_002_frontend_react.jd.txt",
+      "resume_file": "case_002_frontend_react.resume.txt"
+    }
+  ]
+}
