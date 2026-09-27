@@ -68,6 +68,37 @@ jobs:
           path: eval/results/
           if-no-files-found: ignore
 
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        # The API is mocked at the fetch boundary, so no backend is needed.
+        run: npm run test
+
+      - name: Build
+        run: npx vite build
+
   docker:
     name: Docker image
     runs-on: ubuntu-latest
@@ -98,6 +129,12 @@ jobs:
           uid=$(docker exec hiring-agent-ci id -u)
           echo "container uid: ${uid}"
           test "${uid}" != "0"
+
+      - name: Confirm the UI and API are both served from one origin
+        run: |
+          curl -fsS http://127.0.0.1:8000/ | grep -q 'id="root"'
+          curl -fsS http://127.0.0.1:8000/api/v1/examples | grep -q '"examples"'
+          echo "UI served at / and API served under /api"
 
       - name: Stop container
         if: always()

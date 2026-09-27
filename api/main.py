@@ -78,8 +78,7 @@ async def attach_request_id(request: Request, call_next):
 
 
 @app.get("/api/v1/info")
-@app.get("/")
-async def root() -> dict:
+async def api_info() -> dict:
     """API metadata and effective configuration."""
     return {
         "message": "Hiring Agent API",
@@ -407,7 +406,14 @@ if FRONTEND_DIST.is_dir():
 
     logger.info("serving built frontend from %s", FRONTEND_DIST)
 else:
-    logger.info("no built frontend at %s; API only", FRONTEND_DIST)
+    # API-only deployment, or a dev backend with no build yet. "/" then answers
+    # with the metadata rather than a 404, which is friendlier when probing.
+    @app.get("/")
+    async def root_info() -> dict:
+        """API metadata, served at the root when no UI build is present."""
+        return await api_info()
+
+    logger.info("no built frontend at %s; serving the API only", FRONTEND_DIST)
 
 
 if __name__ == "__main__":

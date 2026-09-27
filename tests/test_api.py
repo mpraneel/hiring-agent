@@ -75,8 +75,9 @@ def with_stub_llm(monkeypatch):
 # --------------------------------------------------------------------------
 
 
-def test_root_reports_configuration(client):
-    body = client.get("/").json()
+def test_api_info_reports_configuration(client):
+    """Served under /api so it cannot shadow the UI at the root path."""
+    body = client.get("/api/v1/info").json()
     assert body["status"] == "running"
     assert body["llm_provider"] in ("openai", "gemini")
     assert "llm_model" in body
@@ -472,3 +473,18 @@ def test_api_routes_are_not_shadowed_by_the_static_mount(client):
     """The catch-all must never swallow an API path."""
     assert client.get("/api/v1/examples").status_code == 200
     assert client.get("/health").status_code == 200
+
+
+def test_root_serves_the_ui_when_built_else_api_info(client):
+    """The UI owns "/". Without a build, the root answers with metadata.
+
+    Which branch runs depends on whether frontend/dist exists in this checkout,
+    so both outcomes are accepted, but "/" must never 404.
+    """
+    response = client.get("/")
+    assert response.status_code == 200
+    content_type = response.headers.get("content-type", "")
+    if "text/html" in content_type:
+        assert 'id="root"' in response.text
+    else:
+        assert response.json()["status"] == "running"
