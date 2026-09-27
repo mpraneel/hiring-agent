@@ -154,7 +154,10 @@ MUST_CUES: Tuple[str, ...] = (
 NICE_CUE_RE = re.compile("|".join(NICE_CUES), re.IGNORECASE)
 MUST_CUE_RE = re.compile("|".join(MUST_CUES), re.IGNORECASE)
 
-BULLET_PREFIX_RE = re.compile(r"^[\s•‣◦⁃∙\-\*→▶o]+(?=\S)")
+# No "o" here even though some Word exports use it as a bullet glyph: it ate
+# the first letter of any line starting with one, turning "own the services"
+# into "wn the services" in the text the UI displays and indexes into.
+BULLET_PREFIX_RE = re.compile(r"^[\s•‣◦⁃∙\-\*→▶]+(?=\S)")
 NUMBERED_PREFIX_RE = re.compile(r"^\s*(?:\d+[.)]|[a-z][.)])\s+")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 HEADING_TRAILING_RE = re.compile(r"[\s:;.\-–—|]+$")

@@ -212,3 +212,24 @@ def test_html_tags_are_stripped(parser):
 
 def test_title_is_none_for_a_headless_jd(parser):
     assert parser.parse_jd("- Strong Python.\n") is not None
+
+
+def test_a_line_starting_with_o_keeps_its_first_letter(parser):
+    """The bullet class once included 'o', eating the leading letter."""
+    cleaned = parser._clean_text("Requirements\nown the deployment pipeline\n")
+    assert "own the deployment pipeline" in cleaned
+    assert "wn the deployment pipeline" not in cleaned.replace("own the", "")
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["own the roadmap", "operate the cluster", "onboarding new engineers"],
+)
+def test_words_beginning_with_o_survive_cleaning(parser, line):
+    assert line in parser._clean_text(f"Requirements\n{line}\n")
+
+
+def test_real_bullet_glyphs_are_still_stripped(parser):
+    cleaned = parser._clean_text("Requirements\n• Strong Python\n- Docker\n")
+    assert "- Strong Python" in cleaned
+    assert "•" not in cleaned
