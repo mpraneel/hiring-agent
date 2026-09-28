@@ -17,8 +17,8 @@ class BaselineScorer:
         """
         # Get normalized skills from both resume and JD
         resume_skills = set(resume.skills_norm)
-        jd_must_have_skills = set(jd.must_haves_raw)
-        jd_nice_to_have_skills = set(jd.nice_to_haves_raw)
+        jd_must_have_skills = set(jd.must_have_skills)
+        jd_nice_to_have_skills = set(jd.nice_to_have_skills)
         
         # Calculate matches
         matched_must_have = resume_skills.intersection(jd_must_have_skills)
@@ -54,8 +54,8 @@ class BaselineScorer:
     def get_detailed_breakdown(self, resume: ParsedResume, jd: ParsedJD) -> dict:
         """Get detailed breakdown of the scoring."""
         resume_skills = set(resume.skills_norm)
-        jd_must_have_skills = set(jd.must_haves_raw)
-        jd_nice_to_have_skills = set(jd.nice_to_haves_raw)
+        jd_must_have_skills = set(jd.must_have_skills)
+        jd_nice_to_have_skills = set(jd.nice_to_have_skills)
         
         # Calculate matches
         matched_must_have = resume_skills.intersection(jd_must_have_skills)
@@ -98,8 +98,8 @@ class BaselineScorer:
     def get_skill_gaps(self, resume: ParsedResume, jd: ParsedJD) -> dict:
         """Analyze skill gaps between resume and job description."""
         resume_skills = set(resume.skills_norm)
-        jd_must_have_skills = set(jd.must_haves_raw)
-        jd_nice_to_have_skills = set(jd.nice_to_haves_raw)
+        jd_must_have_skills = set(jd.must_have_skills)
+        jd_nice_to_have_skills = set(jd.nice_to_have_skills)
         
         # Calculate gaps
         missing_must_have = jd_must_have_skills - resume_skills
@@ -122,8 +122,8 @@ class BaselineScorer:
     def get_skill_overlap(self, resume: ParsedResume, jd: ParsedJD) -> dict:
         """Analyze skill overlap between resume and job description."""
         resume_skills = set(resume.skills_norm)
-        jd_must_have_skills = set(jd.must_haves_raw)
-        jd_nice_to_have_skills = set(jd.nice_to_haves_raw)
+        jd_must_have_skills = set(jd.must_have_skills)
+        jd_nice_to_have_skills = set(jd.nice_to_have_skills)
         
         # Calculate overlaps
         must_have_overlap = resume_skills.intersection(jd_must_have_skills)

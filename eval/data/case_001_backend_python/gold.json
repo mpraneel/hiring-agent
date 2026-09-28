@@ -1,0 +1,6 @@
+{
+  "notes": "UNLABELED. See eval/README.md for the labeling procedure. Leave the lists empty until a human has labeled this case; run_eval.py skips unlabeled cases rather than scoring against empty truth.",
+  "jd_must_have": [],
+  "jd_nice_to_have": [],
+  "resume_skills": []
+}

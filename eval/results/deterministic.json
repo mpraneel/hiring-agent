@@ -1,0 +1,134 @@
+{
+  "mode": "deterministic",
+  "generated_at": "2026-09-26T23:48:01+00:00",
+  "cases_discovered": 2,
+  "cases_labeled": 0,
+  "per_field": {
+    "jd_must_have": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null
+    },
+    "jd_nice_to_have": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null
+    },
+    "resume_skills": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null
+    }
+  },
+  "micro_average": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "precision": null,
+    "recall": null,
+    "f1": null
+  },
+  "classification": {
+    "correct": 0,
+    "total": 0,
+    "accuracy": null
+  },
+  "per_case": [
+    {
+      "case_id": "case_001_backend_python",
+      "labeled": false,
+      "extraction_path": "deterministic/deterministic",
+      "predicted": {
+        "jd_must_have": [
+          "docker",
+          "fastapi",
+          "postgresql",
+          "python",
+          "rest",
+          "starlette",
+          "testing"
+        ],
+        "jd_nice_to_have": [
+          "caching",
+          "go",
+          "kafka",
+          "kubernetes",
+          "rate limiting",
+          "redis",
+          "terraform"
+        ],
+        "resume_skills": [
+          "django",
+          "docker",
+          "fastapi",
+          "github actions",
+          "grafana",
+          "kubernetes",
+          "postgresql",
+          "pytest",
+          "python",
+          "redis",
+          "rest",
+          "terraform"
+        ]
+      },
+      "counts": {},
+      "classification": {
+        "correct": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "case_002_frontend_react",
+      "labeled": false,
+      "extraction_path": "deterministic/deterministic",
+      "predicted": {
+        "jd_must_have": [
+          "accessibility",
+          "javascript",
+          "react",
+          "testing",
+          "typescript",
+          "vite",
+          "webpack"
+        ],
+        "jd_nice_to_have": [
+          "css",
+          "figma",
+          "node.js",
+          "storybook",
+          "tailwind"
+        ],
+        "resume_skills": [
+          "accessibility",
+          "css",
+          "figma",
+          "git",
+          "html",
+          "javascript",
+          "jest",
+          "react",
+          "storybook",
+          "tailwind",
+          "testing library",
+          "typescript",
+          "vite"
+        ]
+      },
+      "counts": {},
+      "classification": {
+        "correct": 0,
+        "total": 0
+      }
+    }
+  ]
+}

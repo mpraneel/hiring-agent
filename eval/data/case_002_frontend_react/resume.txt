@@ -1,0 +1,24 @@
+Priya Raman
+priya.raman@example.com | (555) 040-5060 | Somerville, MA
+
+Summary
+Frontend engineer focused on component libraries and accessible interfaces.
+Four years of experience, most of it in healthcare products.
+
+Skills
+React, TypeScript, JavaScript, HTML, CSS, Tailwind, Vite, Jest,
+React Testing Library, Storybook, Figma, accessibility, Git
+
+Experience
+Frontend Engineer at Beacon Clinical, 2022 - 2025
+- Maintained a 60 component React and TypeScript library used by four teams
+- Took the component library from partial to full keyboard navigation support
+- Migrated the build from webpack to Vite, halving cold start time
+- Documented every component in Storybook
+
+Junior Frontend Developer at Tidewater Apps, 2021 - 2022
+- Built marketing pages in React with Tailwind
+- Wrote Jest and React Testing Library tests for shared form components
+
+Education
+Bachelor of Arts in Cognitive Science, Tufts University, 2021

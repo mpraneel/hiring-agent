@@ -1,37 +1,104 @@
-from pydantic import BaseModel
-from typing import List, Optional
+"""Pydantic models for parsed documents and match results."""
+
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
+
+# Which code path produced an extraction. "fallback" means the LLM was tried
+# and failed, which is worth distinguishing from never having tried it.
+ExtractionPath = Literal["llm", "deterministic", "fallback", "hybrid"]
+
+# Whether the explanation layer ran. "disabled" means no key was configured,
+# "unavailable" means it was tried and failed. The score is unaffected either way.
+LLMStatus = Literal["ok", "unavailable", "disabled"]
+
+Priority = Literal["must", "nice"]
+
+
+class SkillSpan(BaseModel):
+    """One extracted skill together with where it was evidenced.
+
+    ``start`` and ``end`` are character offsets into the ``source_text`` of the
+    document this came from, computed on the backend so the UI never has to
+    search for a span. They are None when the skill was extracted but its
+    evidence could not be located, which keeps the chip list consistent with the
+    score instead of silently dropping the skill.
+    """
+
+    skill: str
+    priority: Optional[Priority] = None
+    evidence: str = ""
+    start: Optional[int] = None
+    end: Optional[int] = None
 
 
 class CandidateExperience(BaseModel):
+    """One role from a resume's experience section."""
+
     title: str
     company: Optional[str] = None
     start: Optional[str] = None
     end: Optional[str] = None
-    bullets: List[str] = []
+    bullets: List[str] = Field(default_factory=list)
 
 
 class ParsedResume(BaseModel):
+    """A resume after extraction.
+
+    ``skills_raw`` holds the skill strings exactly as the document spelled them.
+    ``skills_norm`` holds canonical ontology names, and is the only field the
+    scorer reads. Skills the ontology does not recognize are carried through to
+    ``skills_norm`` unchanged rather than dropped.
+    """
+
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
-    skills_raw: List[str] = []
-    skills_norm: List[str] = []
-    education: List[str] = []
-    experiences: List[CandidateExperience] = []
+    skills_raw: List[str] = Field(default_factory=list)
+    skills_norm: List[str] = Field(default_factory=list)
+    education: List[str] = Field(default_factory=list)
+    experiences: List[CandidateExperience] = Field(default_factory=list)
+    extraction_path: ExtractionPath = "deterministic"
+    source_text: str = ""
+    spans: List[SkillSpan] = Field(default_factory=list)
 
 
 class ParsedJD(BaseModel):
+    """A job description after extraction.
+
+    ``must_have_skills`` and ``nice_to_have_skills`` hold **canonical** skill
+    names, not raw document text, because the scorer intersects them directly
+    with ``ParsedResume.skills_norm``. They were previously named with a "_raw"
+    suffix, which invited exactly the wrong thing to be written into them.
+
+    The two lists are disjoint. A skill named in both sections of a JD is kept
+    as must-have only, otherwise it would also be counted twice by the weighting.
+    """
+
     title: Optional[str] = None
-    must_haves_raw: List[str] = []
-    nice_to_haves_raw: List[str] = []
-    skills_norm: List[str] = []
+    must_have_skills: List[str] = Field(default_factory=list)
+    nice_to_have_skills: List[str] = Field(default_factory=list)
+    skills_norm: List[str] = Field(default_factory=list)
+    extraction_path: ExtractionPath = "deterministic"
+    source_text: str = ""
+    spans: List[SkillSpan] = Field(default_factory=list)
 
 
 class MatchResult(BaseModel):
-    match_score: float  # 0 to 1
+    """The outcome of scoring one resume against one job description.
+
+    ``match_score`` is computed deterministically from the extracted skills and
+    is never adjusted by an LLM, so the same inputs always produce the same
+    number. ``llm_rationale`` and ``suggestions`` explain that number; they
+    cannot change it.
+    """
+
+    match_score: float = Field(ge=0.0, le=1.0)
     matched_skills: List[str]
     missing_skills: List[str]
     nice_matches: List[str]
-    baseline_score: float
+    baseline_score: float = Field(ge=0.0, le=1.0)
     llm_rationale: Optional[str] = None
-    suggestions: List[str] = []  # optional bullet rewrites or learning resources
+    suggestions: List[str] = Field(default_factory=list)
+    extraction_path: ExtractionPath = "deterministic"
+    llm_status: LLMStatus = "disabled"

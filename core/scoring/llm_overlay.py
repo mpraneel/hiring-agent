@@ -1,186 +1,163 @@
-import os
+"""Grounded explanation of an already computed score.
+
+The LLM is shown the computed breakdown and nothing else. It never sees the
+resume, the job description, or any text it could mine for new claims, and it
+never sees or produces the number's inputs. That is the whole point: an
+explanation that cannot reach the source cannot justify a score it did not see,
+and cannot quietly invent a skill the candidate never mentioned.
+
+Failures propagate to the caller. The previous implementation caught its own
+exceptions and returned the error string as the rationale, so the aggregator's
+fallback never ran and raw provider exception text reached API clients.
+"""
+
+from __future__ import annotations
+
 import json
-from typing import Optional, List
-from ..schemas.models import ParsedResume, ParsedJD, MatchResult
+import logging
+import re
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from ..extraction.models import MatchExplanation
+from ..extraction.provider import (
+    StructuredProvider,
+    StructuredProviderError,
+    build_provider,
+)
+from ..normalize.normalizer import SkillNormalizer
+
+logger = logging.getLogger(__name__)
+
+SYSTEM_PROMPT = """You explain resume-to-job match scores to a recruiter.
+
+You are given a score that has already been computed, together with the exact
+skill lists it was computed from. Your job is to describe that result.
+
+Rules:
+- Reference only skills that appear in the lists you are given. Do not name any
+  other skill, tool or technology, and do not speculate about what the candidate
+  might also know.
+- Do not restate the score as a different number, and do not argue that it
+  should be higher or lower. The score is fixed.
+- Write two or three sentences of rationale, in plain professional language.
+- Give at most three suggestions. Every suggestion must name a skill from the
+  missing must-have or missing nice-to-have list, and nothing else.
+- If nothing is missing, return an empty suggestions list."""
+
+
+@dataclass
+class ScoreBreakdown:
+    """Everything the explainer is allowed to know about a match."""
+
+    score: float
+    matched_must: List[str] = field(default_factory=list)
+    matched_nice: List[str] = field(default_factory=list)
+    missing_must: List[str] = field(default_factory=list)
+    missing_nice: List[str] = field(default_factory=list)
+    must_total: int = 0
+    nice_total: int = 0
+    extraction_path: str = "deterministic"
+
+    @property
+    def missing(self) -> List[str]:
+        return list(self.missing_must) + list(self.missing_nice)
+
+    def to_prompt(self) -> str:
+        """Render the breakdown as the only context the model receives."""
+
+        def render(label: str, values: List[str]) -> str:
+            return f"{label}: {', '.join(values) if values else 'none'}"
+
+        return "\n".join(
+            [
+                f"Match score: {self.score:.2f} ({self.score * 100:.0f} percent)",
+                f"Must-have skills matched: {len(self.matched_must)} of {self.must_total}",
+                f"Nice-to-have skills matched: {len(self.matched_nice)} of {self.nice_total}",
+                "",
+                render("Matched must-have", self.matched_must),
+                render("Matched nice-to-have", self.matched_nice),
+                render("Missing must-have", self.missing_must),
+                render("Missing nice-to-have", self.missing_nice),
+                "",
+                f"Skills were extracted by the {self.extraction_path} path.",
+            ]
+        )
 
 
 class LLMOverlay:
-    def __init__(self, provider: str = "openai"):
-        """Initialize the LLM overlay with specified provider."""
-        self.provider = provider.lower()
-        self.api_key = os.getenv("LLM_API_KEY")
-        
-        if not self.api_key:
-            raise ValueError("LLM_API_KEY environment variable is required")
-        
-        # Initialize the appropriate client
-        if self.provider == "openai":
-            self._init_openai()
-        elif self.provider == "gemini":
-            self._init_gemini()
+    """Produces a validated, grounded explanation of a score breakdown."""
+
+    def __init__(
+        self,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        structured_provider: Optional[StructuredProvider] = None,
+        normalizer: Optional[SkillNormalizer] = None,
+    ) -> None:
+        self.normalizer = normalizer or SkillNormalizer()
+        if structured_provider is not None:
+            self._provider = structured_provider
         else:
-            raise ValueError(f"Unsupported LLM provider: {provider}")
-    
-    def _init_openai(self):
-        """Initialize OpenAI client."""
-        try:
-            import openai
-            self.client = openai.OpenAI(api_key=self.api_key)
-        except ImportError:
-            raise ImportError("OpenAI package not installed. Run: pip install openai")
-    
-    def _init_gemini(self):
-        """Initialize Gemini client."""
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
-        except ImportError:
-            raise ImportError("Google Generative AI package not installed. Run: pip install google-generativeai")
-    
-    def generate_rationale(self, resume: ParsedResume, jd: ParsedJD, match_result: MatchResult) -> str:
-        """Generate rationale explaining the match score and gaps."""
-        prompt = self._build_rationale_prompt(resume, jd, match_result)
-        
-        try:
-            if self.provider == "openai":
-                return self._call_openai(prompt)
-            elif self.provider == "gemini":
-                return self._call_gemini(prompt)
-        except Exception as e:
-            return f"Unable to generate rationale: {str(e)}"
-    
-    def generate_suggestions(self, resume: ParsedResume, jd: ParsedJD, match_result: MatchResult) -> List[str]:
-        """Generate suggestions for improving the resume."""
-        prompt = self._build_suggestions_prompt(resume, jd, match_result)
-        
-        try:
-            if self.provider == "openai":
-                response = self._call_openai(prompt)
-            elif self.provider == "gemini":
-                response = self._call_gemini(prompt)
-            
-            # Parse suggestions from response
-            return self._parse_suggestions(response)
-        except Exception as e:
-            return [f"Unable to generate suggestions: {str(e)}"]
-    
-    def _build_rationale_prompt(self, resume: ParsedResume, jd: ParsedJD, match_result: MatchResult) -> str:
-        """Build prompt for generating rationale."""
-        return f"""
-You are an expert recruiter analyzing a candidate's fit for a job position. Based on the following information, provide a concise and professional rationale explaining the match score and highlighting key strengths and gaps.
+            self._provider = build_provider(provider=provider, model=model)
 
-JOB DESCRIPTION:
-Title: {jd.title or 'Not specified'}
-Must-have skills: {', '.join(jd.must_haves_raw) if jd.must_haves_raw else 'None specified'}
-Nice-to-have skills: {', '.join(jd.nice_to_haves_raw) if jd.nice_to_haves_raw else 'None specified'}
+    def explain(self, breakdown: ScoreBreakdown) -> MatchExplanation:
+        """Return a validated explanation, or raise.
 
-CANDIDATE PROFILE:
-Name: {resume.name or 'Not specified'}
-Skills: {', '.join(resume.skills_norm) if resume.skills_norm else 'None detected'}
-
-MATCH RESULTS:
-Score: {match_result.baseline_score:.2f} ({match_result.baseline_score * 100:.1f}%)
-Matched skills: {', '.join(match_result.matched_skills) if match_result.matched_skills else 'None'}
-Missing skills: {', '.join(match_result.missing_skills) if match_result.missing_skills else 'None'}
-
-Please provide a 2-3 sentence rationale that:
-1. Explains the overall match score
-2. Highlights the candidate's key strengths
-3. Identifies the most critical gaps
-4. Uses professional, objective language
-
-Focus on the most important points and keep it concise.
-"""
-    
-    def _build_suggestions_prompt(self, resume: ParsedResume, jd: ParsedJD, match_result: MatchResult) -> str:
-        """Build prompt for generating suggestions."""
-        return f"""
-You are an expert resume writer helping a candidate improve their resume for a specific job application. Based on the following information, provide 2-3 specific, actionable suggestions.
-
-JOB DESCRIPTION:
-Title: {jd.title or 'Not specified'}
-Must-have skills: {', '.join(jd.must_haves_raw) if jd.must_haves_raw else 'None specified'}
-Nice-to-have skills: {', '.join(jd.nice_to_haves_raw) if jd.nice_to_haves_raw else 'None specified'}
-
-CANDIDATE PROFILE:
-Skills: {', '.join(resume.skills_norm) if resume.skills_norm else 'None detected'}
-
-MISSING SKILLS:
-{', '.join(match_result.missing_skills) if match_result.missing_skills else 'None'}
-
-Please provide 2-3 specific suggestions that:
-1. Focus on the most critical missing skills
-2. Are actionable and specific (e.g., "Add a bullet point about Docker deployment experience")
-3. Include learning resources or quick wins where appropriate
-4. Are realistic and achievable
-
-Format each suggestion as a separate bullet point starting with "• ".
-Keep suggestions concise and practical.
-"""
-    
-    def _call_openai(self, prompt: str) -> str:
-        """Call OpenAI API."""
-        response = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that provides professional, objective analysis and suggestions."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=300,
-            temperature=0.3
+        Raising is deliberate. The aggregator decides what an unavailable
+        explanation means for the response; this layer must not paper over it.
+        """
+        raw = self._provider.generate_json(
+            SYSTEM_PROMPT, breakdown.to_prompt(), MatchExplanation
         )
-        return response.choices[0].message.content.strip()
-    
-    def _call_gemini(self, prompt: str) -> str:
-        """Call Gemini API."""
-        response = self.model.generate_content(prompt)
-        return response.text.strip()
-    
-    def _parse_suggestions(self, response: str) -> List[str]:
-        """Parse suggestions from LLM response."""
-        suggestions = []
-        
-        # Split by bullet points or numbered items
-        lines = response.split('\n')
-        for line in lines:
-            line = line.strip()
-            if line.startswith(('•', '-', '*', '→', '▶', '1.', '2.', '3.')):
-                # Remove the bullet point marker
-                suggestion = line.lstrip('•-*→▶').strip()
-                suggestion = suggestion.lstrip('0123456789.').strip()
-                if suggestion:
-                    suggestions.append(suggestion)
-            elif line and len(suggestions) > 0:
-                # This might be a continuation of the previous suggestion
-                suggestions[-1] += " " + line
-        
-        # If no bullet points found, split by sentences
-        if not suggestions and response:
-            sentences = response.split('.')
-            for sentence in sentences:
-                sentence = sentence.strip()
-                if sentence and len(sentence) > 10:  # Minimum length for a meaningful suggestion
-                    suggestions.append(sentence + '.')
-        
-        return suggestions[:3]  # Limit to 3 suggestions
-    
-    def is_available(self) -> bool:
-        """Check if LLM service is available."""
         try:
-            if self.provider == "openai":
-                # Test with a simple prompt
-                test_response = self.client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": "Hello"}],
-                    max_tokens=5
+            explanation = MatchExplanation.model_validate_json(raw)
+        except Exception as exc:
+            raise StructuredProviderError(f"explanation failed validation: {exc}") from exc
+
+        explanation.suggestions = self._filter_suggestions(
+            explanation.suggestions, breakdown
+        )
+        return explanation
+
+    # -- grounding check --------------------------------------------------
+
+    def _filter_suggestions(
+        self, suggestions: List[str], breakdown: ScoreBreakdown
+    ) -> List[str]:
+        """Drop suggestions that name a skill which is not actually missing.
+
+        Telling a candidate to add a skill they already listed, or one the job
+        never asked for, is worse than saying nothing.
+        """
+        missing = {s.lower() for s in breakdown.missing}
+        kept: List[str] = []
+
+        for suggestion in suggestions:
+            mentioned = self._skills_mentioned(suggestion)
+            stray = mentioned - missing
+            if stray:
+                logger.warning(
+                    "dropping suggestion naming skills that are not missing: %s",
+                    ", ".join(sorted(stray)),
                 )
-                return True
-            elif self.provider == "gemini":
-                # Test with a simple prompt
-                test_response = self.model.generate_content("Hello")
-                return True
-        except Exception:
-            return False
-        
-        return False
+                continue
+            kept.append(suggestion)
+
+        return kept[:3]
+
+    def _skills_mentioned(self, text: str) -> set[str]:
+        """Canonical skills named in a piece of text."""
+        lowered = text.lower()
+        found: set[str] = set()
+        for canonical, variants in self.normalizer.ontology.items():
+            for surface in (canonical, *variants):
+                if self.normalizer.is_ambiguous(surface):
+                    # Too short to identify from prose; the stoplist exists for
+                    # exactly this reason.
+                    continue
+                pattern = r"(?<![a-z0-9])" + re.escape(surface.lower()) + r"(?![a-z0-9])"
+                if re.search(pattern, lowered):
+                    found.add(canonical)
+                    break
+        return found
